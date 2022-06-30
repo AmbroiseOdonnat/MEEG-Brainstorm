@@ -405,8 +405,8 @@ class EEGNet_1D(nn.Module):
         self.block1 = nn.Sequential(
                         nn.Conv1d(in_channels=1,
                                   out_channels=8,
-                                  kernel_size=(1, 64),
-                                  padding=(0, 32),
+                                  kernel_size=64,
+                                  padding=32,
                                   bias=False),
                         nn.BatchNorm1d(8)
                         )
@@ -415,7 +415,7 @@ class EEGNet_1D(nn.Module):
         self.block2 = nn.Sequential(
                         nn.Conv1d(in_channels=8,
                                   out_channels=16,
-                                  kernel_size=(1, 1),
+                                  kernel_size=1,
                                   groups=2,
                                   bias=False),
                         nn.ELU(),
@@ -427,13 +427,13 @@ class EEGNet_1D(nn.Module):
         self.block3 = nn.Sequential(
                         nn.Conv1d(in_channels=16,
                                   out_channels=16,
-                                  kernel_size=(1, 16),
-                                  padding=(0, 8),
+                                  kernel_size=16,
+                                  padding=8,
                                   groups=16,
                                   bias=False),
                         nn.Conv1d(in_channels=16,
                                   out_channels=16,
-                                  kernel_size=(1, 1),
+                                  kernel_size=1,
                                   bias=False),
                         nn.ELU(),
                         nn.AdaptiveAvgPool1d(output_size=8),
