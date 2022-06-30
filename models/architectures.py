@@ -295,8 +295,8 @@ class EEGNet(nn.Module):
         Predicts probability of spike occurence in a trial.
 
     Input (tensor): Batch of trials of dimension
-                    [batch_size x n_channels x n_time_points].
-    Output (tensor): Logits of dimension [batch_size x 1].
+                    [batch_size x 1 x n_channels x n_time_points].
+    Output (tensor): Logits of dimension [batch_size].
     """
 
     def __init__(self):
@@ -378,6 +378,104 @@ class EEGNet(nn.Module):
         return out, attention_weights
 
 
+""" ********** EEGNet ********** """
+
+
+class EEGNet_1D(nn.Module):
+
+    """ EEGNet inspired by:
+        `"EEGNet: A Compact Convolutional Neural Network
+        for EEG-based Brain-Computer Interfaces"
+        <https://arxiv.org/pdf/1611.08024.pdf>`_.
+        Implementation inspired by:
+        `<https://github.com/Tammie-Li/RSVP-EEGNet/blob/master/models/eegnet.py>`_
+        Predicts probability of spike occurence in a trial.
+        Takes single-channel trial as input.
+
+    Input (tensor): Batch of trials of dimension
+                    [batch_size x 1 x n_time_points]
+    Output (tensor): Logits of dimension [batch_size].
+    """
+
+    def __init__(self):
+
+        super().__init__()
+
+        # Block 1: conv2d
+        self.block1 = nn.Sequential(
+                        nn.Conv1d(in_channels=1,
+                                  out_channels=8,
+                                  kernel_size=(1, 64),
+                                  padding=(0, 32),
+                                  bias=False),
+                        nn.BatchNorm1d(8)
+                        )
+
+        # Block 2: depthwiseconv2d
+        self.block2 = nn.Sequential(
+                        nn.Conv1d(in_channels=8,
+                                  out_channels=16,
+                                  kernel_size=(1, 1),
+                                  groups=2,
+                                  bias=False),
+                        nn.ELU(),
+                        nn.AdaptiveAvgPool1d(output_size=4),
+                        nn.Dropout()
+                        )
+
+        # Block 3: separableconv2d
+        self.block3 = nn.Sequential(
+                        nn.Conv1d(in_channels=16,
+                                  out_channels=16,
+                                  kernel_size=(1, 16),
+                                  padding=(0, 8),
+                                  groups=16,
+                                  bias=False),
+                        nn.Conv1d(in_channels=16,
+                                  out_channels=16,
+                                  kernel_size=(1, 1),
+                                  bias=False),
+                        nn.ELU(),
+                        nn.AdaptiveAvgPool1d(output_size=8),
+                        nn.Dropout()
+                        )
+
+        # Block 4: classifier
+        self.classifier = nn.Linear(128, 1)
+
+        # Weight initialization
+        self.classifier.apply(normal_initialization)
+
+    def forward(self,
+                x: Tensor):
+
+        """ Apply EEGNet model.
+        Args:
+            x (tensor): Batch of trials with dimension
+                        [batch_size x 1 x n_time_points].
+
+        Returns:
+            out (tensor): Logits of dimension [batch_size].
+            attention_weights (tensor): Artificial attention weights
+                                        to match other models' outputs.
+        """
+
+        # Conv2d
+        x = self.block1(x)
+
+        # Depthwise Conv2d
+        x = self.block2(x)
+
+        # Separable Conv2d
+        x = self.block3(x)
+
+        # Classifier
+        x = x.view(x.size(0), -1)
+        out, attention_weights = self.classifier(x).squeeze(1), torch.zeros(1)
+
+        return out, attention_weights
+
+
 """ ********** Gated Transformer Network ********** """
 
 
@@ -390,8 +488,8 @@ class GTN(nn.Module):
         Predicts probability of spike occurence in a trial.
 
     Input (tensor): Batch of trials of dimension
-                    [batch_size x n_channels x n_time_points].
-    Output (tensor): Logits of dimension [batch_size x 1].
+                    [batch_size x 1 x n_channels x n_time_points].
+    Output (tensor): Logits of dimension [batch_size].
     """
 
     def __init__(self,
@@ -530,7 +628,7 @@ class STT(nn.Module):
 
     Input (tensor): Batch of trials of dimension
                     [batch_size x 1 x n_channels x n_time_points].
-    Output (tensor): Logits of dimension [batch_size x 1].
+    Output (tensor): Logits of dimension [batch_size].
     """
 
     def __init__(self,
@@ -632,7 +730,7 @@ class RNN_self_attention(nn.Module):
         <https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=9747560>`_.
 
     Input (tensor): Batch of trials of dimension
-                    [batch_size x n_time_points x 1].
+                    [batch_size x 1 x n_time_points].
     Output (tensor): Logits of dimension [batch_size].
     """
 
@@ -668,7 +766,7 @@ class RNN_self_attention(nn.Module):
         """ Apply 1D-RNN with self-attention model.
         Args:
             x (tensor): Batch of trials with dimension
-                        [batch_size x n_time_points x 1].
+                        [batch_size x 1 x n_time_points].
 
         Returns:
             out (tensor): Logits of dimension [batch_size].
