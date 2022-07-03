@@ -234,7 +234,6 @@ class Loader():
         test_labels.append(labels[subject_LOPO])
         test_chan.append(annotated_channels[subject_LOPO])
 
-
         # Z-score normalization
         test_data = [[np.expand_dims((data-target_mean) / target_std,
                                      axis=1)
