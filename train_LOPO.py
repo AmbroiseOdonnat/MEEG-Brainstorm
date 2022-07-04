@@ -17,7 +17,7 @@ from loguru import logger
 from torch import nn
 from torch.optim import Adam
 
-from models.architectures import EEGNet, EEGNet_1D, GTN, RNN_self_attention
+from models.architectures import *
 from models.architectures import STT
 from models.training import make_model
 from loader.dataloader import Loader
