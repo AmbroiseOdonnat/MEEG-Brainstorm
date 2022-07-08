@@ -204,7 +204,6 @@ for gen_seed in range(5):
         model = make_model(architecture,
                            train_loader,
                            val_loader,
-                           test_loader,
                            optimizer,
                            warmup,
                            warm_optimizer,
@@ -218,7 +217,7 @@ for gen_seed in range(5):
         history = model.train()
 
         # Compute test performance and save it
-        acc, f1, precision, recall = model.score()
+        acc, f1, precision, recall = model.score(test_loader)
         results.append(
             {
                 "method": method,
