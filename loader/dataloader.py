@@ -387,9 +387,9 @@ class Loader():
             test_data.append((x-target_mean) / target_std)
             test_labels.append(y)
 
-        train_dataset = Dataset(train_data, train_labels, transform=self.transform)
-        val_dataset = Dataset(val_data, val_labels, transform=None)
-        test_dataset = Dataset(test_data, test_labels, transform=None)
+        train_dataset = Dataset(train_data, train_labels, transforms=self.transforms)
+        val_dataset = Dataset(val_data, val_labels, transforms=None)
+        test_dataset = Dataset(test_data, test_labels, transforms=None)
 
         train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size,
                                   shuffle=True, num_workers=num_workers,

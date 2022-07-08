@@ -49,8 +49,7 @@ def get_parser():
     parser.add_argument("--lambd", type=float, default=1e-4)
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--transform", action="store_true")
-    parser.add_argument("--mix_up", action="store_true")
-    parser.add_argument("--beta", type=float, default=0.4)
+    parser.add_argument("--patience", type=int, default=10)
 
     return parser
 
@@ -72,14 +71,12 @@ cost_sensitive = args.cost_sensitive
 lambd = args.lambd
 len_trials = args.len_trials
 transform = args.transform
-mix_up = args.mix_up
-beta = args.beta
+patience = args.patience
 
 # Recover params
 gpu_id = 0
 weight_decay = 0
 lr = 1e-3  # Learning rate
-patience = 10
 
 # Define device
 available, device = define_device(gpu_id)
@@ -215,7 +212,7 @@ for seed in range(5):
         os.mkdir("../results")
 
     # Compute test performance and save it
-    acc, f1, precision, recall = model.score(test_loader)
+    acc, f1, precision, recall = model.score()
     results.append(
         {
             "method": method,

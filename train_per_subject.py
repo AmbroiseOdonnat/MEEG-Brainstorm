@@ -47,8 +47,7 @@ def get_parser():
     parser.add_argument("--cost_sensitive", action="store_true")
     parser.add_argument("--lambd", type=float, default=1e-4)
     parser.add_argument("--len_trials", type=float, default=2)
-    parser.add_argument("--mix_up", action="store_true")
-    parser.add_argument("--beta", type=float, default=0.4)
+    parser.add_argument("--patience", type=int, default=10)
 
     return parser
 
@@ -69,10 +68,10 @@ weight_loss = args.weight_loss
 cost_sensitive = args.cost_sensitive
 lambd = args.lambd
 len_trials = args.len_trials
+patience = args.patience
 
 # Recover params
 lr = 1e-3  # Learning rate
-patience = 10
 weight_decay = 0
 gpu_id = 0
 
@@ -198,7 +197,7 @@ for train_subject_id in subject_ids:
             os.mkdir("../results")
 
         # Compute test performance and save it
-        acc, f1, precision, recall = model.score(test_loader)
+        acc, f1, precision, recall = model.score()
         results.append(
             {
                 "method": method,
