@@ -24,6 +24,53 @@ from .functional import sign_flip
 from .functional import smooth_time_mask
 from .functional import time_reverse
 from .functional import affine_scaling
+from .functional import zoom
+
+class Zoom(Transform):
+    """Affine trasnformation.
+    Parameters
+    ----------
+    probability : float
+        Float setting the probability of applying the operation.
+    random_state: int | numpy.random.Generator, optional
+        Seed to be used to instantiate numpy random number generator instance.
+        Used to decide whether or not to transform given the probability
+        argument. Defaults to None.
+    """
+    operation = staticmethod(zoom)
+
+    def __init__(
+        self,
+        probability,
+        coeff=0.2,
+        random_state=None
+    ):
+        super().__init__(
+            probability=probability,
+            random_state=random_state
+        )
+        self.coeff = coeff
+
+    def get_augmentation_params(self, *batch):
+        """Return transform parameters.
+        Parameters
+        ----------
+        X : tensor.Tensor
+            The data.
+        y : tensor.Tensor
+            The labels.
+        Returns
+        -------
+        params : dict
+            Contains:
+            * phase_noise_magnitude : float
+                The magnitude of the transformation.
+            * random_state : numpy.random.Generator
+                The generator to use.
+        """
+        return {
+            "coeff": self.coeff,
+        }
 
 
 class AffineScaling(Transform):
