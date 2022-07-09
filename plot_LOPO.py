@@ -33,8 +33,8 @@ fnames = list(
 df = pd.concat([pd.read_csv(fname) for fname in fnames], axis=0)
 
 fig = plt.figure()
-sns.boxplot(data=df, x="method", y=metric, palette="Set2")
-sns.swarmplot(data=df, x="method", y=metric, hue="test_subject_id", palette="tab10")
+sns.boxplot(data=df.loc[(df["weight_loss"] == False)], x="transform", y=metric, palette="Set2")
+sns.swarmplot(data=df.loc[(df["weight_loss"] == False)], x="transform", y=metric, hue="test_subject_id", palette="tab10")
 plt.tight_layout()
 plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
