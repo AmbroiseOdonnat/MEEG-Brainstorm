@@ -33,6 +33,7 @@ fnames = list(
 df = pd.concat([pd.read_csv(fname) for fname in fnames], axis=0)
 
 fig = plt.figure()
+
 data = df
 sns.boxplot(data=data, x="weight_loss", y=metric, palette="Set2")
 sns.swarmplot(data=data, x="weight_loss", y=metric, hue="test_subject_id", palette="tab10")

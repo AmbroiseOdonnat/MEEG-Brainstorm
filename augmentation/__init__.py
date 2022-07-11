@@ -3,6 +3,7 @@ Utilities for data augmentation.
 """
 from .base import Transform, IdentityTransform, Compose, AugmentedDataLoader
 from .transforms import (
+    Zoom,
     AffineScaling,
     TimeReverse,
     SignFlip,

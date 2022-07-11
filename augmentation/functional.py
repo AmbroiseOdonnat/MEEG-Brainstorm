@@ -4,9 +4,11 @@
 # License: BSD (3-clause)
 
 from numbers import Real
+import scipy 
 
 import numpy as np
 from scipy.interpolate import Rbf
+from scipy import signal
 from sklearn.utils import check_random_state
 import torch
 from torch.fft import fft, ifft
@@ -31,8 +33,33 @@ def identity(X, y):
     """
     return X, y
 
+def zoom(X, y, coeff):
+    """Zoom on the time axis of each input.
+    Parameters
+    ----------
+    X : torch.Tensor
+        EEG input example or batch.
+    y : torch.Tensor
+        EEG labels for the example or batch.
+    a_min: borne max.
+    a_max: borne min.
+    Returns
+    -------
+    torch.Tensor
+        Transformed inputs.
+    torch.Tensor
+        Transformed labels.
+    """
+    len_x = X.shape[2]
+    coeff = int(np.random.random()*coeff*len_x)
+    X = X.numpy()
+    X = scipy.signal.resample(X[:, :, coeff:-(coeff+1)],
+                              len_x,
+                              axis=2)
+    return torch.Tensor(X), y
+
 def affine_scaling(X, y, a_min, a_max):
-    """Flip the time axis of each input.
+    """Apply of affine transform of each input.
     Parameters
     ----------
     X : torch.Tensor

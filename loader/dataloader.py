@@ -9,14 +9,17 @@ Usage: type "from model import <class>" to use class.
 Contributors: Ambroise Odonnat and Theo Gnassounou.
 """
 
+from cProfile import label
 import torch
 import random
+import copy
 
 import numpy as np
 
 from torch.utils.data import DataLoader, random_split
 
 from utils.utils_ import pad_tensor, weighted_sampler
+from augmentation import AffineScaling, Zoom, ChannelsShuffle
 
 
 class Dataset():
@@ -101,6 +104,7 @@ class Loader():
                  data,
                  labels,
                  annotated_channels,
+                 data_augment,
                  single_channel,
                  batch_size,
                  num_workers,
@@ -125,6 +129,7 @@ class Loader():
         self.data = data
         self.labels = labels
         self.annotated_channels = annotated_channels
+        self.offline_DA = data_augment
         self.single_channel = single_channel
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -184,8 +189,8 @@ class Loader():
         return loader
 
     def LOPO_dataloader(self,
-                        data,
-                        labels,
+                        data_base,
+                        labels_base,
                         annotated_channels,
                         single_channel,
                         batch_size,
@@ -207,6 +212,8 @@ class Loader():
         Returns:
             tuple: tuple of all dataloaders and the training labels.
         """
+        data = copy.deepcopy(data_base)
+        labels = copy.deepcopy(labels_base)
         # Get dataset of every tuple (data, label)
         subject_ids = np.asarray(list(data.keys()))
 
@@ -227,6 +234,37 @@ class Loader():
         print('Test on: {}, '
               'Validation on: {}'.format(subject_LOPO,
                                          val_subject_ids))
+        if self.data_augment == "offline":
+            affine_scaling = AffineScaling(
+                probability=1,  # defines the probability of modifying the input
+                a_min=0.5,
+                a_max=1.5,
+            )
+
+            zoom = Zoom(
+                probability=1,  # defines the probability of modifying the input
+                coeff=0.3,
+            )
+
+            channels_shuffle = ChannelsShuffle(
+                probability=1,  # defines the probability of modifying the input
+                p_shuffle=0.2
+            )
+
+            augments = [affine_scaling, zoom, channels_shuffle]
+            for subject_id in train_subject_ids:
+                for i in range(len(data[subject_id])):
+                    pos_spike = np.where(labels[subject_id][i] == 1)[0]
+                    base_new_data = data[subject_id][i][pos_spike]
+                    new_data = []
+                    for _ in range(3):
+                        augment_data = base_new_data
+                        for augment in augments:
+                            augment_data = augment(augment_data)
+                        new_data.append(augment_data)
+                    new_data = np.concatenate(new_data)
+                    data[subject_id][i] = np.concatenate([data[subject_id][i], new_data])
+                    labels[subject_id][i] = np.concatenate([labels[subject_id][i], [1 for _ in range(len(new_data))]])
 
         # Training data
         train_data = []

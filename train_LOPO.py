@@ -24,7 +24,7 @@ from utils.losses import get_criterion
 from utils.learning_rate_warmup import NoamOpt
 from utils.utils_ import define_device, get_pos_weight, reset_weights
 from utils.select_subject import select_subject
-from augmentation import AffineScaling, FrequencyShift, ChannelsShuffle
+from augmentation import AffineScaling, Zoom, ChannelsShuffle
 
 
 def get_parser():
@@ -52,7 +52,7 @@ def get_parser():
     parser.add_argument("--gamma", type=float, default=2)
     parser.add_argument("--alpha", type=float, default=0.7)
     parser.add_argument("--len_trials", type=float, default=2)
-    parser.add_argument("--transform", action="store_true")
+    parser.add_argument("--data_augment", type=str, default=None)
     parser.add_argument("--patience", type=int, default=10)
 
     return parser
@@ -77,7 +77,7 @@ focal = args.focal
 gamma = args.gamma
 alpha = args.alpha
 len_trials = args.len_trials
-transform = args.transform
+data_augment = args.data_augment
 patience = args.patience
 
 # Recover params
@@ -123,28 +123,28 @@ data, labels, annotated_channels = dataset.all_datasets()
 subject_ids = np.asarray(list(data.keys()))
 
 # Define transform for data augmentation
-if transform:
+if data_augment=="online":
 
     affine_scaling = AffineScaling(
-        probability=.5,  # defines the probability of modifying the input
-        a_min=0.7,
-        a_max=1.3,
+        probability=0.5,  # defines the probability of modifying the input
+        a_min=0.5,
+        a_max=1.5,
     )
 
-    frequency_shift = FrequencyShift(
-        probability=.5,  # defines the probability of modifying the input
-        sfreq=128,
-        max_delta_freq=.2
+    zoom = Zoom(
+        probability=0.5,  # defines the probability of modifying the input
+        coeff=0.3,
     )
 
     channels_shuffle = ChannelsShuffle(
-        probability=.5,  # defines the probability of modifying the input
+        probability=0.5,  # defines the probability of modifying the input
         p_shuffle=0.2
     )
 
-    transforms = [affine_scaling, frequency_shift, channels_shuffle]
+    transforms = [affine_scaling, zoom, channels_shuffle]
 else:
     transforms = None
+
 
 # Apply Leave-One-Patient-Out strategy
 
@@ -161,6 +161,7 @@ for gen_seed in range(5):
         loader = Loader(data,
                         labels,
                         annotated_channels,
+                        data_augment=data_augment,
                         single_channel=single_channel,
                         batch_size=batch_size,
                         num_workers=num_workers,
@@ -168,7 +169,6 @@ for gen_seed in range(5):
                         subject_LOPO=test_subject_id,
                         seed=seed,
                         )
-
         train_loader, val_loader, test_loader, train_labels = loader.load()
 
         # Define architecture
@@ -238,7 +238,7 @@ for gen_seed in range(5):
                 "focal": focal,
                 "len_trials": len_trials,
                 "test_subject_id": test_subject_id,
-                "transform": transform,
+                "data_augment": data_augment,
                 "fold": seed,
                 "acc": acc,
                 "f1": f1,
