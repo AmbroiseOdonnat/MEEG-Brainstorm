@@ -20,7 +20,7 @@ from models.architectures import *
 from models.training import make_model
 from loader.dataloader import Loader
 from loader.data import Data
-from utils.cost_sensitive_loss import get_criterion
+from utils.losses import get_criterion
 from utils.learning_rate_warmup import NoamOpt
 from utils.utils_ import define_device, get_pos_weight, reset_weights
 from utils.select_subject import select_subject
@@ -47,8 +47,7 @@ def get_parser():
     parser.add_argument("--cost_sensitive", action="store_true")
     parser.add_argument("--lambd", type=float, default=1e-4)
     parser.add_argument("--len_trials", type=float, default=2)
-    parser.add_argument("--mix_up", action="store_true")
-    parser.add_argument("--beta", type=float, default=0.4)
+    parser.add_argument("--patience", type=int, default=10)
 
     return parser
 
@@ -69,10 +68,10 @@ weight_loss = args.weight_loss
 cost_sensitive = args.cost_sensitive
 lambd = args.lambd
 len_trials = args.len_trials
+patience = args.patience
 
 # Recover params
 lr = 1e-3  # Learning rate
-patience = 10
 weight_decay = 0
 gpu_id = 0
 
@@ -158,8 +157,6 @@ for train_subject_id in subject_ids:
         elif method == "STT":
             n_time_points = len(data[subject_ids[0]][0][0][0])
             architecture = STT(n_time_points=n_time_points)
-        elif method == "STTNet":
-            architecture = STTNet()
         architecture.apply(reset_weights)
 
         if weight_loss:

@@ -20,7 +20,7 @@ from models.architectures import *
 from models.training import make_model
 from loader.dataloader import Loader
 from loader.data import Data
-from utils.cost_sensitive_loss import get_criterion
+from utils.losses import get_criterion
 from utils.learning_rate_warmup import NoamOpt
 from utils.utils_ import define_device, get_pos_weight, reset_weights
 from augmentation import AffineScaling, ChannelsShuffle, FrequencyShift
@@ -49,8 +49,7 @@ def get_parser():
     parser.add_argument("--lambd", type=float, default=1e-4)
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--transform", action="store_true")
-    parser.add_argument("--mix_up", action="store_true")
-    parser.add_argument("--beta", type=float, default=0.4)
+    parser.add_argument("--patience", type=int, default=10)
 
     return parser
 
@@ -72,14 +71,12 @@ cost_sensitive = args.cost_sensitive
 lambd = args.lambd
 len_trials = args.len_trials
 transform = args.transform
-mix_up = args.mix_up
-beta = args.beta
+patience = args.patience
 
 # Recover params
 gpu_id = 0
 weight_decay = 0
 lr = 1e-3  # Learning rate
-patience = 10
 
 # Define device
 available, device = define_device(gpu_id)
