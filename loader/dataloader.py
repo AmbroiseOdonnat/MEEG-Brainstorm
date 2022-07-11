@@ -129,7 +129,7 @@ class Loader():
         self.data = data
         self.labels = labels
         self.annotated_channels = annotated_channels
-        self.offline_DA = data_augment
+        self.data_augment = data_augment
         self.single_channel = single_channel
         self.batch_size = batch_size
         self.num_workers = num_workers
