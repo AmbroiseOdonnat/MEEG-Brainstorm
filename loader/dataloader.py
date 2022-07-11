@@ -9,8 +9,10 @@ Usage: type "from model import <class>" to use class.
 Contributors: Ambroise Odonnat and Theo Gnassounou.
 """
 
+from cProfile import label
 import torch
 import random
+import copy
 
 import numpy as np
 
@@ -102,7 +104,7 @@ class Loader():
                  data,
                  labels,
                  annotated_channels,
-                 offline_DA,
+                 data_augment,
                  single_channel,
                  batch_size,
                  num_workers,
@@ -127,7 +129,7 @@ class Loader():
         self.data = data
         self.labels = labels
         self.annotated_channels = annotated_channels
-        self.offline_DA = offline_DA
+        self.offline_DA = data_augment
         self.single_channel = single_channel
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -187,8 +189,8 @@ class Loader():
         return loader
 
     def LOPO_dataloader(self,
-                        data,
-                        labels,
+                        data_base,
+                        labels_base,
                         annotated_channels,
                         single_channel,
                         batch_size,
@@ -210,6 +212,8 @@ class Loader():
         Returns:
             tuple: tuple of all dataloaders and the training labels.
         """
+        data = copy.deepcopy(data_base)
+        labels = copy.deepcopy(labels_base)
         # Get dataset of every tuple (data, label)
         subject_ids = np.asarray(list(data.keys()))
 
@@ -230,7 +234,7 @@ class Loader():
         print('Test on: {}, '
               'Validation on: {}'.format(subject_LOPO,
                                          val_subject_ids))
-        if self.offline_DA:
+        if self.data_augment == "offline":
             affine_scaling = AffineScaling(
                 probability=1,  # defines the probability of modifying the input
                 a_min=0.5,
@@ -261,6 +265,7 @@ class Loader():
                     new_data = np.concatenate(new_data)
                     data[subject_id][i] = np.concatenate([data[subject_id][i], new_data])
                     labels[subject_id][i] = np.concatenate([labels[subject_id][i], [1 for _ in range(len(new_data))]])
+
         # Training data
         train_data = []
         train_labels = []
