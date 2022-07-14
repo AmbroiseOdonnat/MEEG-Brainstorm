@@ -61,14 +61,13 @@ def get_alpha(labels):
     """
 
     neg, pos = 0, 0
-    for id in range(len(labels)):
-        for n_sess in range(len(labels[id])):
-            for n_trial in range(len(labels[id][n_sess])):
-                label = labels[id][n_sess][n_trial]
-                if label == 1:
-                    pos += 1
-                else:
-                    neg += 1
+    for i in range(len(labels)):
+
+        label = labels[i]
+        if label == 1:
+            pos += 1
+        else:
+            neg += 1
 
     maj = max(pos, neg)
     mino = min(pos, neg)

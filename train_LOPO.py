@@ -40,7 +40,7 @@ def get_parser():
     parser.add_argument("--method", type=str, default="RNN_self_attention")
     parser.add_argument("--save", action="store_true")
     parser.add_argument("--warmup", action="store_true")
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--n_subjects", type=int, default=5)
@@ -53,7 +53,7 @@ def get_parser():
     parser.add_argument("--alpha", type=float, default=0.7)
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
-    parser.add_argument("--patience", type=int, default=10)
+    parser.add_argument("--patience", type=int, default=5)
 
     return parser
 
@@ -142,8 +142,11 @@ if data_augment=="online":
     )
 
     transforms = [affine_scaling, zoom, channels_shuffle]
+elif data_augment=="offline":
+    transforms = None
 else:
     transforms = None
+    data_augment = False
 
 
 # Apply Leave-One-Patient-Out strategy
@@ -151,11 +154,12 @@ else:
 """ Each subject is chosen once as test set while the model is trained
     and validate on the remaining ones.
 """
-for gen_seed in range(5):
+for gen_seed in range(1):
     np.random.seed(gen_seed)
     seed_list = [np.random.randint(0, 100)
                  for _ in range(len(selected_subjects))]
     for i, test_subject_id in enumerate(subject_ids):
+        test_subject_id = "sub-pt0045"
         seed = seed_list[i]
         # Labels are the spike events times
         loader = Loader(data,
@@ -259,7 +263,7 @@ for gen_seed in range(5):
                 os.mkdir("../results")
 
             results_path = (
-                "../results/csv_LOPO"
+                "../results/csv_LOPO_test"
             )
             if not os.path.exists(results_path):
                 os.mkdir(results_path)

@@ -163,25 +163,8 @@ class Loader():
         """
 
         # Get dataloader
-        data_list = []
-        labels_list = []
-        for id in range(len(data)):
-            for n_sess in range(len(data[id])):
-                for n_trial in range(len(data[id][n_sess])):
-                    x = data[id][n_sess][n_trial]
-                    y = labels[id][n_sess][n_trial]
-                    chan = chans[id][n_sess]
-                    if single_channel:
-                        # Select only the channels where a spike occurs
-                        if chan != []:
-                            x = x[:, chan]
-                        for i in range(x.shape[1]):
-                            data_list.append(x[:, i])
-                            labels_list.append(y)
-                    else:
-                        data_list.append(x)
-                        labels_list.append(y)
-        dataset = Dataset(data_list, labels_list, transforms=transforms)
+
+        dataset = Dataset(data, labels, transforms=transforms)
         loader = DataLoader(dataset=dataset, batch_size=batch_size,
                             shuffle=shuffle, num_workers=num_workers,
                             collate_fn=PadCollate(dim=1))
@@ -254,62 +237,114 @@ class Loader():
             augments = [affine_scaling, zoom, channels_shuffle]
             for subject_id in train_subject_ids:
                 for i in range(len(data[subject_id])):
-                    pos_spike = np.where(labels[subject_id][i] == 1)[0]
-                    base_new_data = data[subject_id][i][pos_spike]
-                    new_data = []
-                    for _ in range(3):
-                        augment_data = base_new_data
-                        for augment in augments:
-                            augment_data = augment(augment_data)
-                        new_data.append(augment_data)
-                    new_data = np.concatenate(new_data)
-                    data[subject_id][i] = np.concatenate([data[subject_id][i], new_data])
-                    labels[subject_id][i] = np.concatenate([labels[subject_id][i], [1 for _ in range(len(new_data))]])
+                    n_spikes = np.sum(labels[subject_id][i])
+                    n = len(labels[subject_id][i])
+                    if n_spikes/n < 0.3:
+                        n_no_spike_to_remove = ((n-n_spikes) - n_spikes)
+                        pos_no_spike =np.where(labels[subject_id][i] == 0)[0]
+                        no_spike_to_remove = np.random.choice(pos_no_spike, size=n_no_spike_to_remove, replace=False)
+                        labels[subject_id][i] = np.delete(labels[subject_id][i], no_spike_to_remove)
+                        data[subject_id][i] = np.delete(data[subject_id][i], no_spike_to_remove, axis=0)
+                    n = len(labels[subject_id][i])
+                    # if n != 0:
+                    #     pos_spike = np.where(labels[subject_id][i] == 1)[0]
+                    #     ratio = n_spikes/n
+                    #     if ratio < 0.3:
+                    #         n_data_augment = 2
+                    #     elif ratio < 0.4:
+                    #         n_data_augment = 1
+                    #     else:
+                    #         n_data_augment = 0
+                    #     base_new_data = data[subject_id][i][pos_spike]
+                    #     new_data = []
+                    #     for _ in range(n_data_augment):
+                    #         augment_data = base_new_data
+                    #         for augment in augments:
+                    #             augment_data = augment(augment_data)
+                    #         new_data.append(augment_data)
+                    #     if new_data != []:
+                    #         new_data = np.concatenate(new_data)
+                    #         data[subject_id][i] = np.concatenate([data[subject_id][i], new_data])
+                    #         labels[subject_id][i] = np.concatenate([labels[subject_id][i], [1 for _ in range(len(new_data))]])
 
         # Training data
         train_data = []
         train_labels = []
         train_chan = []
         for id in train_subject_ids:
-            train_data.append(data[id])
-            train_labels.append(labels[id])
-            train_chan.append(annotated_channels[id])
+            for n_sess in range(len(data[id])):
+                for n_trial in range(len(data[id][n_sess])):
+                    x = data[id][n_sess][n_trial]
+                    y = labels[id][n_sess][n_trial]
+                    chan = annotated_channels[id][n_sess]
+                    if single_channel:
+                        # Select only the channels where a spike occurs
+                        if chan != []:
+                            x = x[:, chan]
+                        for i in range(x.shape[1]):
+                            train_data.append(x[:, i])
+                            train_labels.append(y)
+                    else:
+                        train_data.append(x)
+                        train_labels.append(y)
 
         # Z-score normalization
-        target_mean = np.mean([np.mean([np.mean(data) for data in data_id])
-                               for data_id in train_data])
-        target_std = np.mean([np.mean([np.std(data) for data in data_id])
-                              for data_id in train_data])
-        train_data = [[np.expand_dims((data-target_mean) / target_std, axis=1)
-                       for data in data_id] for data_id in train_data]
+        target_mean = np.mean([np.mean(data) for data in train_data])
+        target_std = np.mean([np.std(data) for data in train_data])
 
+        train_data = [np.expand_dims((data-target_mean) / target_std, axis=0)
+                       for data in train_data] 
+        print(len(train_labels), np.sum(train_labels)/len(train_labels))
         # Validation data
         val_data = []
         val_labels = []
         val_chan = []
         for id in val_subject_ids:
-            val_data.append(data[id])
-            val_labels.append(labels[id])
-            val_chan.append(annotated_channels[id])
+            for n_sess in range(len(data[id])):
+                for n_trial in range(len(data[id][n_sess])):
+                    x = data[id][n_sess][n_trial]
+                    y = labels[id][n_sess][n_trial]
+                    chan = annotated_channels[id][n_sess]
+                    if single_channel:
+                        # Select only the channels where a spike occurs
+                        if chan != []:
+                            x = x[:, chan]
+                        for i in range(x.shape[1]):
+                            val_data.append(x[:, i])
+                            val_labels.append(y)
+                    else:
+                        val_data.append(x)
+                        val_labels.append(y)
 
         # Z-score normalization
-        val_data = [[np.expand_dims((data-target_mean) / target_std,
-                                    axis=1)
-                    for data in data_id] for data_id in val_data]
+        val_data = [np.expand_dims((data-target_mean) / target_std,
+                                    axis=0)
+                    for data in val_data] 
 
         # Test data
         test_data = []
         test_labels = []
         test_chan = []
-        test_data.append(data[subject_LOPO])
-        test_labels.append(labels[subject_LOPO])
-        test_chan.append(annotated_channels[subject_LOPO])
 
+        for n_sess in range(len(data[subject_LOPO])):
+            for n_trial in range(len(data[subject_LOPO][n_sess])):
+                x = data[subject_LOPO][n_sess][n_trial]
+                y = labels[subject_LOPO][n_sess][n_trial]
+                chan = annotated_channels[subject_LOPO][n_sess]
+                if single_channel:
+                    # Select only the channels where a spike occurs
+                    if chan != []:
+                        x = x[:, chan]
+                    for i in range(x.shape[1]):
+                        test_data.append(x[:, i])
+                        test_labels.append(y)
+                else:
+                    test_data.append(x)
+                    test_labels.append(y)
 
         # Z-score normalization
-        test_data = [[np.expand_dims((data-target_mean) / target_std,
-                                     axis=1)
-                      for data in data_id] for data_id in test_data]
+        test_data = [np.expand_dims((data-target_mean) / target_std,
+                                     axis=0) for data in test_data]
         train_loader = self.pad_loader(train_data,
                                        train_labels,
                                        train_chan,
