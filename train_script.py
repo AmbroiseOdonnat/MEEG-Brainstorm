@@ -2,6 +2,7 @@ import argparse
 import os
 
 from itertools import chain, combinations
+from sre_constants import OP_IGNORE
 
 
 def get_parser():
@@ -39,16 +40,17 @@ trainings = args.training
 len_trials = args.len_trials
 # load data filtered
 path_root = args.path_root
+options = ['', '--data_augment offline', '--weight_loss', '--focal', '--focal --data_augment offline']
 for training in trainings:
-    for method in methods:
-        for len_trial in len_trials:
-            for i, combo in enumerate(powerset(options), 1):
-                options_combo = ''
-                for option in combo:
-                    options_combo += option
+    for len_trial in len_trials:
+        for method in methods:
+            # for i, combo in enumerate(powerset(options), 1):
+            #     options_combo = ''
+            for option in options:
+
 
                 os.system(' python {}.py'
-                        ' --save{} --method {} --weight_loss --selected_subjects sub-pt0078 sub-pt0045 sub-pt0038 sub-pt0066 sub-pt0096 sub-pt0090 sub-pt0013 sub-pt0095 sub-pt0075 sub-pt0093 --len_trials {}'.format(training,
-                                                        options_combo,
+                        ' --save --method {} --n_subjects 10 --len_trials {} {}'.format(training,
                                                         method,
-                                                        len_trial))
+                                                        len_trial,
+                                                        option))

@@ -32,6 +32,13 @@ def select_subject(n_subject, path_subject_info, path_root, len_trials):
                     "number_of_segment": n_ied_segment,
                 }
             )
+            results.append(
+                {
+                    "subject_id": subject_id,
+                    "type_of_segment": "ratio",
+                    "number_of_segment": n_ied_segment/(n_ied_segment + n_no_ied_segment),
+                }
+            )
 
         df = pd.DataFrame(results)
 
