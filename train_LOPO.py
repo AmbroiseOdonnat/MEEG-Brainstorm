@@ -54,6 +54,8 @@ def get_parser():
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
     parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--parameters", type=float, nargs="+", default=[0.1, 0.1])
+
 
     return parser
 
@@ -79,7 +81,7 @@ alpha = args.alpha
 len_trials = args.len_trials
 data_augment = args.data_augment
 patience = args.patience
-
+parameters = args.parameters
 # Recover params
 lr = 1e-3  # Learning rate
 weight_decay = 0
@@ -159,7 +161,6 @@ for gen_seed in range(1):
     seed_list = [np.random.randint(0, 100)
                  for _ in range(len(selected_subjects))]
     for i, test_subject_id in enumerate(subject_ids):
-        test_subject_id = "sub-pt0045"
         seed = seed_list[i]
         # Labels are the spike events times
         loader = Loader(data,
@@ -219,6 +220,7 @@ for gen_seed in range(1):
         model = make_model(architecture,
                            train_loader,
                            val_loader,
+                           test_loader,
                            optimizer,
                            warmup,
                            warm_optimizer,
@@ -226,7 +228,8 @@ for gen_seed in range(1):
                            criterion,
                            single_channel=single_channel,
                            n_epochs=n_epochs,
-                           patience=patience)
+                           patience=patience,
+                           parameters=parameters)
 
         # Train Model
         history = model.train()

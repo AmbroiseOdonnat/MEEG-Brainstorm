@@ -17,6 +17,7 @@ from sklearn.metrics import precision_score, recall_score
 from sklearn.metrics import f1_score, accuracy_score
 from torch import nn
 
+from utils.utils_ import ot_solve
 
 class make_model():
 
@@ -24,6 +25,7 @@ class make_model():
                  model,
                  train_loader,
                  val_loader,
+                 test_loader,
                  optimizer,
                  warmup,
                  warm_optimizer,
@@ -32,7 +34,8 @@ class make_model():
                  single_channel,
                  n_epochs,
                  patience=None,
-                 n_good_detection=1):
+                 n_good_detection=1,
+                 parameters=[1, 1],):
 
         """
         Args:
@@ -53,6 +56,7 @@ class make_model():
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.test_loader = test_loader
         self.optimizer = optimizer
         self.warmup = warmup
         self.warm_optimizer = warm_optimizer
@@ -62,6 +66,7 @@ class make_model():
         self.n_epochs = n_epochs
         self.patience = patience
         self.n_good_detection = n_good_detection
+        self.parameters = parameters
         self.sigmoid = nn.Sigmoid()
 
     def _do_train(self,
@@ -92,7 +97,12 @@ class make_model():
 
         # Loop on training samples
         for batch_x, batch_y in loader:
+            batch_x_t, _ = next(iter(self.test_loader))
 
+            if batch_x.shape[0] != batch_x_t.shape[0]:
+                break
+
+            batch_x_t = batch_x_t.to(torch.float).to(device=device)
             batch_x = batch_x.to(torch.float).to(device=device)
             batch_y = batch_y.to(torch.float).to(device=device)
 
@@ -103,10 +113,19 @@ class make_model():
                 optimizer.zero_grad()
 
             # Forward
-            output, _ = model(batch_x)
-            loss = criterion(output, batch_y)
-            pred = self.sigmoid(output)
+            output, embedd = model(batch_x)
+            output_t, embedd_t = model(batch_x_t)
 
+            loss_s = criterion(output, batch_y)
+            loss_t = criterion(output_t, batch_y)
+
+            a = torch.full((len(embedd),), 1.0 / len(embedd), device=device)
+            b = torch.full((len(embedd_t),), 1.0 / len(embedd_t), device=device)
+            dist = torch.cdist(embedd, embedd_t, p=2) ** 2
+            M = self.parameters[0]*dist + self.parameters[1] * loss_t
+            gamma = ot_solve(a, b, M, "JDOT", self.parameters)
+            pred = self.sigmoid(output)
+            loss = loss_s + torch.sum(gamma * M)
             # Backward
             loss.backward()
             if self.warmup:

@@ -372,7 +372,7 @@ class EEGNet(nn.Module):
         x = x.view(x.size(0), -1)
         out, attention_weights = self.classifier(x).squeeze(1), torch.zeros(1)
 
-        return out, attention_weights
+        return out, x
 
 
 """ ********** EEGNet-1D ********** """
@@ -465,7 +465,7 @@ class EEGNet_1D(nn.Module):
         x = x.view(x.size(0), -1)
         out, attention_weights = self.classifier(x).squeeze(1), torch.zeros(1)
 
-        return out, attention_weights
+        return out, x
 
 
 """ ********** Gated Transformer Network ********** """
@@ -602,7 +602,7 @@ class GTN(nn.Module):
         # Classifier
         out = self.classifier(encoding).squeeze(1)
 
-        return out, attention_weights
+        return out, encoding
 
 
 """ ********** RNN self-attention ********** """
@@ -682,7 +682,7 @@ class RNN_self_attention(nn.Module):
         # Classifier
         out = self.classifier(x.flatten(1)).squeeze(1)
 
-        return out, attention_weights
+        return out, x.flatten(1)
 
 
 """ ********** Spatial Temporal Transformers ********** """
@@ -785,7 +785,7 @@ class STT(nn.Module):
         # Classifier
         out = self.classifier(code.flatten(1)).squeeze(1)
 
-        return out, attention_weights
+        return out, code.flatten(1)
 
 
 

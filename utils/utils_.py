@@ -9,11 +9,31 @@ Contributors: Ambroise Odonnat.
 """
 
 import torch
+import ot
 
 import numpy as np
 
 from loguru import logger
 from torch.utils.data.sampler import WeightedRandomSampler
+
+
+def ot_solve(a, b, M, method, parameters=None, num_iter_max=100000):
+    a2 = a.detach().cpu().numpy().astype(np.float64)
+    b2 = b.detach().cpu().numpy().astype(np.float64)
+    M2 = M.detach().cpu().numpy().astype(np.float64)
+
+    # project on simplex for float64 or else numerical errors
+    a2 /= a2.sum()
+    b2 /= b2.sum()
+
+    if method == "uJDOT":
+        G = ot.unbalanced.sinkhorn_unbalanced(
+            a2, b2, M2, parameters[2], parameters[3], log=False, numItermax=num_iter_max
+        )
+        return torch.from_numpy(G).to(a.device)
+    elif method == "JDOT":
+        G = ot.emd(a2, b2, M2, log=False, numItermax=num_iter_max)
+        return torch.from_numpy(G).to(a.device)  # .type_as(M) <- problem multiprocess
 
 
 def define_device(gpu_id):
