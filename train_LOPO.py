@@ -159,7 +159,6 @@ for gen_seed in range(1):
     seed_list = [np.random.randint(0, 100)
                  for _ in range(len(selected_subjects))]
     for i, test_subject_id in enumerate(subject_ids):
-        test_subject_id = "sub-pt0045"
         seed = seed_list[i]
         # Labels are the spike events times
         loader = Loader(data,
