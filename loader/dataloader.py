@@ -365,7 +365,7 @@ class Loader():
                                       test_labels,
                                       test_chan,
                                       single_channel=False,
-                                      shuffle=False,
+                                      shuffle=True,
                                       batch_size=batch_size,
                                       transforms=None,
                                       num_workers=num_workers)
