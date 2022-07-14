@@ -26,7 +26,7 @@ metric = args.metric
 
 # Choose where to load the data
 fnames = list(
-    Path(path_data).glob("results_new_weight_loss.csv".format(n_subjects))
+    Path(path_data).glob("results_LOPO_spike_detection_{}_subjects.csv".format(n_subjects))
 )
 
 # concatene all the dataframe
@@ -35,6 +35,7 @@ df = pd.concat([pd.read_csv(fname) for fname in fnames], axis=0)
 fig = plt.figure()
 
 data = df
+
 sns.boxplot(data=data, x="weight_loss", y=metric, palette="Set2")
 sns.swarmplot(data=data, x="weight_loss", y=metric, hue="test_subject_id", palette="tab10")
 plt.tight_layout()
