@@ -266,7 +266,7 @@ for gen_seed in range(1):
                 os.mkdir("../results")
 
             results_path = (
-                "../results/csv_LOPO_test"
+                "../results/csv_LOPO_domain_adapt"
             )
             if not os.path.exists(results_path):
                 os.mkdir(results_path)
