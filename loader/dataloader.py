@@ -279,10 +279,10 @@ class Loader():
                     chan = annotated_channels[id][n_sess]
                     if single_channel:
                         # Select only the channels where a spike occurs
-                        if chan != []:
-                            x = x[:, chan]
-                        for i in range(x.shape[1]):
-                            train_data.append(x[:, i])
+                        if len(chan) != 0:
+                            x = x[chan]
+                        for i in range(x.shape[0]):
+                            train_data.append(x[i])
                             train_labels.append(y)
                     else:
                         train_data.append(x)
@@ -307,10 +307,10 @@ class Loader():
                     chan = annotated_channels[id][n_sess]
                     if single_channel:
                         # Select only the channels where a spike occurs
-                        if chan != []:
-                            x = x[:, chan]
-                        for i in range(x.shape[1]):
-                            val_data.append(x[:, i])
+                        if len(chan) != 0:
+                            x = x[chan]
+                        for i in range(x.shape[0]):
+                            val_data.append(x[i])
                             val_labels.append(y)
                     else:
                         val_data.append(x)
@@ -333,10 +333,10 @@ class Loader():
                 chan = annotated_channels[subject_LOPO][n_sess]
                 if single_channel:
                     # Select only the channels where a spike occurs
-                    if chan != []:
-                        x = x[:, chan]
-                    for i in range(x.shape[1]):
-                        test_data.append(x[:, i])
+                    if len(chan) != 0:
+                        x = x[chan]
+                    for i in range(x.shape[0]):
+                        test_data.append(x[i])
                         test_labels.append(y)
                 else:
                     test_data.append(x)
