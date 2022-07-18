@@ -157,8 +157,8 @@ else:
 for gen_seed in range(1):
     np.random.seed(gen_seed)
     seed_list = [np.random.randint(0, 100)
-                 for _ in range(len(selected_subjects))]
-    for i, test_subject_id in enumerate(subject_ids):
+                 for _ in range(10)]
+    for i, test_subject_id in enumerate(subject_ids[10:]):
         seed = seed_list[i]
         # Labels are the spike events times
         loader = Loader(data,
@@ -232,7 +232,7 @@ for gen_seed in range(1):
 
         torch.save(
             best_model.state_dict(),
-            "../results/model/model_{}".format(test_subject_id),
+            "../results/model/model_{}_{}_{}s_{}_subjects".format(method, test_subject_id, len_trials, len(selected_subjects)),
         )
         # Compute test performance and save it
         acc, f1, precision, recall = model.score(test_loader)

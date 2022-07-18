@@ -234,14 +234,14 @@ class Loader():
                 p_shuffle=0.2
             )
 
-            augments = [affine_scaling, zoom, channels_shuffle]
+            augments = [affine_scaling, zoom]
             for subject_id in train_subject_ids:
                 for i in range(len(data[subject_id])):
                     n_spikes = np.sum(labels[subject_id][i])
                     n = len(labels[subject_id][i])
                     if n_spikes/n < 0.3:
                         n_no_spike_to_remove = ((n-n_spikes) - n_spikes)
-                        pos_no_spike =np.where(labels[subject_id][i] == 0)[0]
+                        pos_no_spike = np.where(labels[subject_id][i] == 0)[0]
                         no_spike_to_remove = np.random.choice(pos_no_spike, size=n_no_spike_to_remove, replace=False)
                         labels[subject_id][i] = np.delete(labels[subject_id][i], no_spike_to_remove)
                         data[subject_id][i] = np.delete(data[subject_id][i], no_spike_to_remove, axis=0)
@@ -279,10 +279,10 @@ class Loader():
                     chan = annotated_channels[id][n_sess]
                     if single_channel:
                         # Select only the channels where a spike occurs
-                        if chan != []:
-                            x = x[:, chan]
-                        for i in range(x.shape[1]):
-                            train_data.append(x[:, i])
+                        if len(chan) != 0:
+                            x = x[chan]
+                        for i in range(x.shape[0]):
+                            train_data.append(x[i].reshape((1, len(x[i]))))
                             train_labels.append(y)
                     else:
                         train_data.append(x)
@@ -293,7 +293,8 @@ class Loader():
         target_std = np.mean([np.std(data) for data in train_data])
 
         train_data = [np.expand_dims((data-target_mean) / target_std, axis=0)
-                       for data in train_data] 
+                       for data in train_data]
+
         print(len(train_labels), np.sum(train_labels)/len(train_labels))
         # Validation data
         val_data = []
@@ -307,10 +308,10 @@ class Loader():
                     chan = annotated_channels[id][n_sess]
                     if single_channel:
                         # Select only the channels where a spike occurs
-                        if chan != []:
-                            x = x[:, chan]
-                        for i in range(x.shape[1]):
-                            val_data.append(x[:, i])
+                        if len(chan) != 0:
+                            x = x[chan]
+                        for i in range(x.shape[0]):
+                            val_data.append(x[i].reshape((1, len(x[i]))))
                             val_labels.append(y)
                     else:
                         val_data.append(x)
@@ -319,7 +320,7 @@ class Loader():
         # Z-score normalization
         val_data = [np.expand_dims((data-target_mean) / target_std,
                                     axis=0)
-                    for data in val_data] 
+                    for data in val_data]
 
         # Test data
         test_data = []
@@ -333,10 +334,10 @@ class Loader():
                 chan = annotated_channels[subject_LOPO][n_sess]
                 if single_channel:
                     # Select only the channels where a spike occurs
-                    if chan != []:
-                        x = x[:, chan]
-                    for i in range(x.shape[1]):
-                        test_data.append(x[:, i])
+                    if len(chan) != 0:
+                        x = x[chan]
+                    for i in range(x.shape[0]):
+                        test_data.append(x[i].reshape((1, len(x[i]))))
                         test_labels.append(y)
                 else:
                     test_data.append(x)
@@ -345,6 +346,7 @@ class Loader():
         # Z-score normalization
         test_data = [np.expand_dims((data-target_mean) / target_std,
                                      axis=0) for data in test_data]
+
         train_loader = self.pad_loader(train_data,
                                        train_labels,
                                        train_chan,
@@ -353,6 +355,7 @@ class Loader():
                                        batch_size=batch_size,
                                        transforms=self.transforms,
                                        num_workers=num_workers)
+
         val_loader = self.pad_loader(val_data,
                                      val_labels,
                                      val_chan,
@@ -361,6 +364,7 @@ class Loader():
                                      batch_size=batch_size,
                                      transforms=None,
                                      num_workers=num_workers)
+
         test_loader = self.pad_loader(test_data,
                                       test_labels,
                                       test_chan,
@@ -439,10 +443,10 @@ class Loader():
                 for i in range(x.shape[1]):
                     train_data.append(x[:, i])
                     train_labels.append(y)
-
             else:
                 train_data.append(x)
                 train_labels.append(y)
+
         for (x, y, chan) in val_dataset:
             x = (x-target_mean) / target_std
             if single_channel:
