@@ -228,8 +228,12 @@ for gen_seed in range(1):
                            patience=patience)
 
         # Train Model
-        history = model.train()
+        best_model, history = model.train()
 
+        torch.save(
+            best_model.state_dict(),
+            "../results/model/model_{}".format(test_subject_id),
+        )
         # Compute test performance and save it
         acc, f1, precision, recall = model.score(test_loader)
         results.append(
@@ -262,7 +266,7 @@ for gen_seed in range(1):
                 os.mkdir("../results")
 
             results_path = (
-                "../results/csv_LOPO_test"
+                "../results/csv_LOPO_domain_adaptation"
             )
             if not os.path.exists(results_path):
                 os.mkdir(results_path)

@@ -241,8 +241,9 @@ class make_model():
                     print(f"Stop training at epoch {epoch}")
                     print(f"Best val loss : {best_val_loss:.4f}\n")
                     break
+        
 
-        return history
+        return self.best_model, history
 
     def score(self, test_loader):
 
