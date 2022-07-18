@@ -646,6 +646,8 @@ class RNN_self_attention(nn.Module):
         # Weight initialization
         self.classifier.apply(normal_initialization)
 
+        
+
     def forward(self,
                 x: Tensor):
 

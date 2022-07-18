@@ -282,7 +282,7 @@ class Loader():
                         if len(chan) != 0:
                             x = x[chan]
                         for i in range(x.shape[0]):
-                            train_data.append(x[i])
+                            train_data.append(x[i].reshape((1, len(x[i]))))
                             train_labels.append(y)
                     else:
                         train_data.append(x)
@@ -310,7 +310,7 @@ class Loader():
                         if len(chan) != 0:
                             x = x[chan]
                         for i in range(x.shape[0]):
-                            val_data.append(x[i])
+                            val_data.append(x[i].reshape((1, len(x[i]))))
                             val_labels.append(y)
                     else:
                         val_data.append(x)
@@ -336,7 +336,7 @@ class Loader():
                     if len(chan) != 0:
                         x = x[chan]
                     for i in range(x.shape[0]):
-                        test_data.append(x[i])
+                        test_data.append(x[i].reshape((1, len(x[i]))))
                         test_labels.append(y)
                 else:
                     test_data.append(x)

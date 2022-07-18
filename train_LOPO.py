@@ -53,6 +53,7 @@ def get_parser():
     parser.add_argument("--alpha", type=float, default=0.7)
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
+    parser.add_argument("--domain_adapt", type=str, default="OT")
     parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--parameters", type=float, nargs="+", default=[0.1, 0.1])
 
@@ -80,6 +81,7 @@ gamma = args.gamma
 alpha = args.alpha
 len_trials = args.len_trials
 data_augment = args.data_augment
+domain_adapt= args.domain_adapt
 patience = args.patience
 parameters = args.parameters
 # Recover params
@@ -194,7 +196,7 @@ for gen_seed in range(1):
             n_time_points = len(data[subject_ids[0]][0][0][0])
             architecture = STT(n_time_points=n_time_points)
         architecture.apply(reset_weights)
-
+        architecture.load_state_dict(torch.load("../results/model/model_{}_{}_{}s_{}_subjects".format(method, test_subject_id, len_trials, len(selected_subjects))))
         # Define training loss
         if weight_loss:
             pos_weight = get_pos_weight(train_labels).to(device)
@@ -246,6 +248,7 @@ for gen_seed in range(1):
                 "len_trials": len_trials,
                 "test_subject_id": test_subject_id,
                 "data_augment": data_augment,
+                "domain_adapt": domain_adapt,
                 "fold": seed,
                 "acc": acc,
                 "f1": f1,
@@ -266,7 +269,7 @@ for gen_seed in range(1):
                 os.mkdir("../results")
 
             results_path = (
-                "../results/csv_LOPO_domain_adapt"
+                "../results/csv_LOPO_domain_adaptation"
             )
             if not os.path.exists(results_path):
                 os.mkdir(results_path)
