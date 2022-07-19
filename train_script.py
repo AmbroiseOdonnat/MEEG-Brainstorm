@@ -12,7 +12,7 @@ def get_parser():
     )
     parser.add_argument("--path_root", type=str, default="../IvadomedNifti/")
 
-    parser.add_argument("--method", type=str, nargs="+",
+    parser.add_argument("--lrs", type=float, nargs="+",
                         default=["RNN_self_attention"])
     parser.add_argument("--options", type=str, nargs="+",
                         default=[])
@@ -20,7 +20,7 @@ def get_parser():
         "--training", type=str, nargs="+", default=['train']
     )
     parser.add_argument(
-        "--len_trials", type=float, nargs="+", default=[2]
+        "--batch_sizes", type=int, nargs="+", default=[2]
     )
     return parser
 
@@ -34,23 +34,19 @@ def powerset(iterable):
 # Experiment name
 parser = get_parser()
 args = parser.parse_args()
-methods = args.method
+lrs = args.lrs
 options = args.options
 trainings = args.training
-len_trials = args.len_trials
+batch_sizes = args.batch_sizes
 # load data filtered
 path_root = args.path_root
-options = ['', '--data_augment offline', '--weight_loss', '--focal', '--focal --data_augment offline']
 for training in trainings:
-    for len_trial in len_trials:
-        for method in methods:
-            # for i, combo in enumerate(powerset(options), 1):
-            #     options_combo = ''
-            for option in options:
+    for batch_size in batch_sizes:
+        for lr in lrs:
+           
 
 
-                os.system(' python {}.py'
-                        ' --save --method {} --n_subjects 10 --len_trials {} {}'.format(training,
-                                                        method,
-                                                        len_trial,
-                                                        option))
+            os.system(' python {}.py'
+                    ' --save --method RNN_self_attention --data_augment offline --n_subjects 20 --len_trials 1 --scheduler --batch_size {} --lr {}'.format(training,
+                                                    batch_size,
+                                                    lr))

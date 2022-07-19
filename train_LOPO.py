@@ -15,13 +15,13 @@ import pandas as pd
 from loguru import logger
 from torch import nn
 from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from models.architectures import *
 from models.training import make_model
 from loader.dataloader import Loader
 from loader.data import Data
 from utils.losses import get_criterion
-from utils.learning_rate_warmup import NoamOpt
 from utils.utils_ import define_device, get_pos_weight, reset_weights
 from utils.select_subject import select_subject
 from augmentation import AffineScaling, Zoom, ChannelsShuffle
@@ -39,8 +39,9 @@ def get_parser():
                         default="../BIDSdataset/Epilepsy_dataset/")
     parser.add_argument("--method", type=str, default="RNN_self_attention")
     parser.add_argument("--save", action="store_true")
-    parser.add_argument("--warmup", action="store_true")
+    parser.add_argument("--scheduler", action="store_true")
     parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--n_subjects", type=int, default=5)
@@ -64,8 +65,9 @@ args = parser.parse_args()
 path_root = args.path_root
 method = args.method
 save = args.save
-warmup = args.warmup
+scheduler = args.scheduler
 batch_size = args.batch_size
+lr = args.lr
 num_workers = args.num_workers
 n_epochs = args.n_epochs
 n_subjects = args.n_subjects
@@ -81,7 +83,6 @@ data_augment = args.data_augment
 patience = args.patience
 
 # Recover params
-lr = 1e-3  # Learning rate
 weight_decay = 0
 gpu_id = 0
 
@@ -178,10 +179,8 @@ for gen_seed in range(1):
         if method == "EEGNet":
             n_time_points = len(data[subject_ids[0]][0][0][0])
             architecture = EEGNet()
-            warmup = False
         if method == "EEGNet_1D":
             architecture = EEGNet_1D()
-            warmup = False
         elif method == "GTN":
             n_time_points = len(data[subject_ids[0]][0][0][0])
             architecture = GTN(n_time_points=n_time_points)
@@ -211,16 +210,17 @@ for gen_seed in range(1):
         # Define optimizer
         optimizer = Adam(architecture.parameters(), lr=lr,
                          weight_decay=weight_decay)
-        warm_optimizer = NoamOpt(optimizer)
-
+        if scheduler:
+            scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5)
+        else:
+            scheduler = None
         # Define training pipeline
         architecture = architecture.to(device)
         model = make_model(architecture,
                            train_loader,
                            val_loader,
                            optimizer,
-                           warmup,
-                           warm_optimizer,
+                           scheduler,
                            train_criterion,
                            criterion,
                            single_channel=single_channel,
@@ -239,7 +239,8 @@ for gen_seed in range(1):
         results.append(
             {
                 "method": method,
-                "warmup": warmup,
+                "lr": lr,
+                "batch_size": batch_size,
                 "weight_loss": weight_loss,
                 "cost_sensitive": cost_sensitive,
                 "focal": focal,
@@ -266,7 +267,7 @@ for gen_seed in range(1):
                 os.mkdir("../results")
 
             results_path = (
-                "../results/csv_LOPO_domain_adaptation"
+                "../results/csv_LOPO_hyparameters"
             )
             if not os.path.exists(results_path):
                 os.mkdir(results_path)

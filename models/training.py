@@ -25,8 +25,7 @@ class make_model():
                  train_loader,
                  val_loader,
                  optimizer,
-                 warmup,
-                 warm_optimizer,
+                 scheduler,
                  train_criterion,
                  val_criterion,
                  single_channel,
@@ -54,8 +53,7 @@ class make_model():
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.optimizer = optimizer
-        self.warmup = warmup
-        self.warm_optimizer = warm_optimizer
+        self.scheduler = scheduler
         self.train_criterion = train_criterion
         self.val_criterion = val_criterion
         self.single_channel = single_channel
@@ -68,7 +66,6 @@ class make_model():
                   model,
                   loader,
                   optimizer,
-                  warm_optimizer,
                   criterion):
 
         """
@@ -97,10 +94,8 @@ class make_model():
             batch_y = batch_y.to(torch.float).to(device=device)
 
             # Optimizer
-            if self.warmup:
-                warm_optimizer.optimizer.zero_grad()
-            else:
-                optimizer.zero_grad()
+
+            optimizer.zero_grad()
 
             # Forward
             output, _ = model(batch_x)
@@ -109,10 +104,8 @@ class make_model():
 
             # Backward
             loss.backward()
-            if self.warmup:
-                warm_optimizer.step()
-            else:
-                optimizer.step()
+
+            optimizer.step()
 
             # Recover loss and prediction
             train_loss.append(loss.item())
@@ -204,11 +197,13 @@ class make_model():
             train_loss, train_perf = self._do_train(self.model,
                                                     self.train_loader,
                                                     self.optimizer,
-                                                    self.warm_optimizer,
                                                     self.train_criterion)
             val_loss, val_perf = self._validate(self.model,
                                                 self.val_loader,
                                                 self.val_criterion)
+
+            if self.scheduler:
+                self.scheduler.step(val_loss)
 
             history.append(
                 {"epoch": epoch,
@@ -241,7 +236,7 @@ class make_model():
                     print(f"Stop training at epoch {epoch}")
                     print(f"Best val loss : {best_val_loss:.4f}\n")
                     break
-        
+
 
         return self.best_model, history
 
