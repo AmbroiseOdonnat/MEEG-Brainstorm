@@ -2,7 +2,6 @@ import argparse
 import os
 
 from itertools import chain, combinations
-from sre_constants import OP_IGNORE
 
 
 def get_parser():
@@ -12,16 +11,17 @@ def get_parser():
     )
     parser.add_argument("--path_root", type=str, default="../IvadomedNifti/")
 
-    parser.add_argument("--lrs", type=float, nargs="+",
-                        default=["RNN_self_attention"])
+    parser.add_argument("--len_trials", type=float, nargs="+",
+                        default=[1])
     parser.add_argument("--options", type=str, nargs="+",
                         default=[])
     parser.add_argument(
-        "--training", type=str, nargs="+", default=['train']
+        "--methods", type=str, nargs="+", default=["STT"]
     )
     parser.add_argument(
-        "--batch_sizes", type=int, nargs="+", default=[2]
+        "--n_good_detections", type=int, nargs="+", default=[2]
     )
+    parser.add_argument("--gpu_id", type=int, default=1)
     return parser
 
 
@@ -34,19 +34,22 @@ def powerset(iterable):
 # Experiment name
 parser = get_parser()
 args = parser.parse_args()
-lrs = args.lrs
+methods = args.methods
 options = args.options
-trainings = args.training
-batch_sizes = args.batch_sizes
+n_good_detections = args.n_good_detections
+len_trials = args.len_trials
+gpu_id = args.gpu_id
 # load data filtered
 path_root = args.path_root
-for training in trainings:
-    for batch_size in batch_sizes:
-        for lr in lrs:
-           
 
-
-            os.system(' python {}.py'
-                    ' --save --method RNN_self_attention --data_augment offline --n_subjects 20 --len_trials 1 --scheduler --batch_size {} --lr {}'.format(training,
-                                                    batch_size,
-                                                    lr))
+for method in methods:
+    for len_trial in len_trials:
+        for n_good_detection in n_good_detections:
+            os.system("python train_LOPO.py"
+                      " --save --method {} --gpu_id {}"
+                      " --balanced --n_subjects 20 "
+                      "--len_trials {} --n_good_detection {}"
+                      .format(method,
+                              gpu_id,
+                              len_trial,
+                              n_good_detection))
