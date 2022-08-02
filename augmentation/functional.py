@@ -4,7 +4,7 @@
 # License: BSD (3-clause)
 
 from numbers import Real
-import scipy 
+import scipy
 
 import numpy as np
 from scipy.interpolate import Rbf
@@ -33,6 +33,7 @@ def identity(X, y):
     """
     return X, y
 
+
 def zoom(X, y, coeff):
     """Zoom on the time axis of each input.
     Parameters
@@ -58,6 +59,7 @@ def zoom(X, y, coeff):
                               axis=2)
     return torch.Tensor(X), y
 
+
 def affine_scaling(X, y, a_min, a_max):
     """Apply of affine transform of each input.
     Parameters
@@ -77,6 +79,7 @@ def affine_scaling(X, y, a_min, a_max):
     """
     a = np.random.random()*(a_max - a_min) + a_min
     return a*X, y
+
 
 def time_reverse(X, y):
     """Flip the time axis of each input.

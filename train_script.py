@@ -11,16 +11,17 @@ def get_parser():
     )
     parser.add_argument("--path_root", type=str, default="../IvadomedNifti/")
 
-    parser.add_argument("--method", type=str, nargs="+",
-                        default=["RNN_self_attention"])
+    parser.add_argument("--len_trials", type=float, nargs="+",
+                        default=[1])
     parser.add_argument("--options", type=str, nargs="+",
                         default=[])
     parser.add_argument(
-        "--training", type=str, nargs="+", default=['train']
+        "--methods", type=str, nargs="+", default=["STT"]
     )
     parser.add_argument(
-        "--len_trials", type=float, nargs="+", default=[2]
+        "--n_good_detections", type=int, nargs="+", default=[2]
     )
+    parser.add_argument("--gpu_id", type=int, default=1)
     return parser
 
 
@@ -33,22 +34,22 @@ def powerset(iterable):
 # Experiment name
 parser = get_parser()
 args = parser.parse_args()
-methods = args.method
+methods = args.methods
 options = args.options
-trainings = args.training
+n_good_detections = args.n_good_detections
 len_trials = args.len_trials
+gpu_id = args.gpu_id
 # load data filtered
 path_root = args.path_root
-for training in trainings:
-    for method in methods:
-        for len_trial in len_trials:
-            for i, combo in enumerate(powerset(options), 1):
-                options_combo = ''
-                for option in combo:
-                    options_combo += option
 
-                os.system(' python {}.py'
-                        ' --save{} --method {} --weight_loss --selected_subjects sub-pt0078 sub-pt0045 sub-pt0038 sub-pt0066 sub-pt0096 sub-pt0090 sub-pt0013 sub-pt0095 sub-pt0075 sub-pt0093 --len_trials {}'.format(training,
-                                                        options_combo,
-                                                        method,
-                                                        len_trial))
+for method in methods:
+    for len_trial in len_trials:
+        for n_good_detection in n_good_detections:
+            os.system("python train_LOPO.py"
+                      " --save --method {} --gpu_id {}"
+                      " --balanced --n_subjects 20 "
+                      "--len_trials {} --n_good_detection {}"
+                      .format(method,
+                              gpu_id,
+                              len_trial,
+                              n_good_detection))

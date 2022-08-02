@@ -12,6 +12,8 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 """
 
 import math
+
+from matplotlib.pyplot import axis
 import torch
 
 import torch.nn.functional as F
@@ -302,7 +304,7 @@ class EEGNet(nn.Module):
     def __init__(self):
 
         super().__init__()
-   
+
         # Block 1: conv2d
         self.block1 = nn.Sequential(
                         nn.Conv2d(in_channels=1,
@@ -451,6 +453,7 @@ class EEGNet_1D(nn.Module):
             attention_weights (tensor): Artificial attention weights
                                         to match other models' outputs.
         """
+        x = x.flatten(start_dim=2)
 
         # Conv1d
         x = self.block1(x)
@@ -661,6 +664,7 @@ class RNN_self_attention(nn.Module):
 
         # First LSTM
         self.LSTM_1.flatten_parameters()
+        x = x.flatten(start_dim=2)
         x, (_, _) = self.LSTM_1(x.transpose(1, 2))
         x = self.avgPool(x.transpose(1, 2))
         x = x.transpose(1, 2)
