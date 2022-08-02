@@ -21,8 +21,6 @@ from os import listdir
 from os.path import isfile, join
 from scipy import signal
 
-from utils.utils_ import get_spike_events, get_spike_windows
-
 
 class Data:
 
@@ -37,7 +35,7 @@ class Data:
         Args:
             path_root (str): Path to data.
             wanted_event_label (str): Annotation of wanted event.
-                                      Default: 'spikeandwave'.
+                                      Default: "spikeandwave".
             len_trials (float): len of the trials in seconds.
             sfreq (int): Sample frequence of the trial wanted.
             n_windows (int): Number of time windows.
@@ -62,7 +60,7 @@ class Data:
             raw_trial (.edf file): Trial of EEG data in .edf format.
             events (dict): Annotated events on the trial.
             wanted_event_label (str): Annotation of wanted event.
-                                      Default: 'spikeandwave'.
+                                      Default: "spikeandwave".
             len_trials (float): len of the trials in seconds.
             sfreq (int): Sample frequence of the trial wanted.
 
@@ -81,10 +79,10 @@ class Data:
         # Get the channels where the spikeandwave is annotated
         for event in events[1].keys():
             len_string_event = len(wanted_event_label)
-            if event[-(len_string_event+1):] == '_' + wanted_event_label:
-                ID = 'EEG '
+            if event[-(len_string_event+1):] == "_" + wanted_event_label:
+                ID = "EEG "
                 i = 0
-                while event[i] != '_':
+                while event[i] != "_":
                     ID += event[i]
                     i += 1
                 ID = ID.upper()
@@ -102,7 +100,7 @@ class Data:
         # TODO deal with overlap and clean this script
 
         len_data = data.shape[1]
-        sfreq_ini = raw_trial.info['sfreq']
+        sfreq_ini = raw_trial.info["sfreq"]
         n_trials = int(len_data/sfreq_ini / len_trials)
         data = data[:, :int(n_trials*len_trials*sfreq_ini)]
         len_data = data.shape[1]
@@ -124,7 +122,7 @@ class Data:
                 continue
 
             try:
-                if events[1]['BAD'] == event[2]:
+                if events[1]["BAD"] == event[2]:
                     j = 0
                     while event[0] >= times[j][-1]:
                         j += 1
@@ -154,7 +152,7 @@ class Data:
         Args:
             folder (list): Folder with a subject data.
             wanted_event_label (str): Annotation of wanted event.
-                                      Default: 'spikeandwave'.
+                                      Default: "spikeandwave".
             len_trials (float): len of the trials in seconds.
             sfreq (int): Sample frequence of the trial wanted.
             n_windows (int): Number of time windows.
@@ -201,7 +199,7 @@ class Data:
         Args:
             path_root (str): Path to data.
             wanted_event_label (str): Annotation of wanted event.
-                                      Default: 'spikeandwave'.
+                                      Default: "spikeandwave".
             len_trials (float): len of the trials in seconds.
             sfreq (int): Sample frequence of the trial wanted.
             n_windows (int): Number of time windows.
@@ -231,7 +229,7 @@ class Data:
                 subject_data = []
                 subject_labels = []
                 subject_annotated_channels = []
-                subject_path = path_root+item+'/eeg/'
+                subject_path = path_root+item+"/eeg/"
                 run_fnames = [subject_path + f for f in listdir(subject_path)
                               if isfile(join(subject_path, f))]
                 for run_fname in run_fnames:

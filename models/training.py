@@ -237,7 +237,6 @@ class make_model():
                     print(f"Best val loss : {best_val_loss:.4f}\n")
                     break
 
-
         return self.best_model, history
 
     def score(self, test_loader):
@@ -251,15 +250,14 @@ class make_model():
             for batch_x, batch_y in test_loader:
                 batch_x = batch_x.to(torch.float).to(device=device)
                 batch_y = batch_y.to(torch.float).to(device=device)
+
                 # Forward
                 if self.single_channel:
                     preds = np.zeros((batch_x.shape[0], batch_x.shape[2]))
                     for i in range(batch_x.shape[2]):
                         output, _ = self.best_model.forward(batch_x[:, :, i])
                         pred = (self.sigmoid(output).cpu().numpy() > 0.5)
-
                         preds[:, i] = pred
-
                     pred = 1*(np.sum(preds, axis=1) >= self.n_good_detection)
                 else:
 
@@ -276,11 +274,17 @@ class make_model():
 
         # Recover performances
         acc = accuracy_score(y_true, y_pred)
-        f1 = f1_score(y_true, y_pred, average='binary',
+        f1 = f1_score(y_true,
+                      y_pred,
+                      average='binary',
                       zero_division=1)
-        precision = precision_score(y_true, y_pred,
-                                    average='binary', zero_division=1)
-        recall = recall_score(y_true, y_pred, average='binary',
+        precision = precision_score(y_true,
+                                    y_pred,
+                                    average='binary',
+                                    zero_division=1)
+        recall = recall_score(y_true,
+                              y_pred,
+                              average='binary',
                               zero_division=1)
 
         print("Performances on test")

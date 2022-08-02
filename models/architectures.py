@@ -304,7 +304,7 @@ class EEGNet(nn.Module):
     def __init__(self):
 
         super().__init__()
-   
+
         # Block 1: conv2d
         self.block1 = nn.Sequential(
                         nn.Conv2d(in_channels=1,
@@ -453,6 +453,7 @@ class EEGNet_1D(nn.Module):
             attention_weights (tensor): Artificial attention weights
                                         to match other models' outputs.
         """
+        x = x.flatten(start_dim=2)
 
         # Conv1d
         x = self.block1(x)

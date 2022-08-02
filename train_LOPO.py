@@ -8,6 +8,7 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 
 import argparse
 import os
+import torch
 
 import numpy as np
 import pandas as pd
@@ -17,12 +18,14 @@ from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from models.architectures import *
+from models.architectures import EEGNet_1D, RNN_self_attention
+from models.architectures import EEGNet, GTN, STT
 from models.training import make_model
 from loader.dataloader import Loader
 from loader.data import Data
 from utils.losses import get_criterion
-from utils.utils_ import define_device, get_pos_weight, reset_weights
+from utils.utils_ import define_device, get_pos_weight
+from utils.utils_ import reset_weights, get_alpha
 from utils.select_subject import select_subject
 from augmentation import AffineScaling, Zoom, ChannelsShuffle
 
@@ -36,14 +39,16 @@ def get_parser():
     )
     parser.add_argument("--path_root",
                         type=str,
-                        default="../BIDSdataset/Epilepsy_dataset/")
+                        default="/home/GRAMES.POLYMTL.CA/p117205/"
+                                "duke/projects/ivadomed/MEEG-Brainstorm/"
+                                "EEG_Epilepsy_27_subjects/")
     parser.add_argument("--method", type=str, default="RNN_self_attention")
     parser.add_argument("--save", action="store_true")
     parser.add_argument("--scheduler", action="store_true")
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--lr", type=float, default=0.01)
-    parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--n_epochs", type=int, default=100)
+    parser.add_argument("--n_good_detection", type=int, default=2)
     parser.add_argument("--n_subjects", type=int, default=5)
     parser.add_argument("--selected_subjects", type=str, nargs="+", default=[])
     parser.add_argument("--weight_loss", action="store_true")
@@ -54,7 +59,9 @@ def get_parser():
     parser.add_argument("--alpha", type=float, default=0.7)
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
+    parser.add_argument("--balanced", action="store_true")
     parser.add_argument("--patience", type=int, default=5)
+    parser.add_argument("--gpu_id", type=int, default=0)
 
     return parser
 
@@ -68,8 +75,8 @@ save = args.save
 scheduler = args.scheduler
 batch_size = args.batch_size
 lr = args.lr
-num_workers = args.num_workers
 n_epochs = args.n_epochs
+n_good_detection = args.n_good_detection
 n_subjects = args.n_subjects
 selected_subjects = args.selected_subjects
 weight_loss = args.weight_loss
@@ -80,11 +87,11 @@ gamma = args.gamma
 alpha = args.alpha
 len_trials = args.len_trials
 data_augment = args.data_augment
+balanced = args.balanced
 patience = args.patience
-
+gpu_id = args.gpu_id
 # Recover params
 weight_decay = 0
-gpu_id = 0
 
 # Define device
 available, device = define_device(gpu_id)
@@ -107,7 +114,7 @@ else:
     single_channel = False
 
 path_subject_info = (
-    "../results/info_subject_{}".format(len_trials)
+    "results/info_subject_{}".format(len_trials)
 )
 if selected_subjects == []:
     selected_subjects = select_subject(n_subjects,
@@ -116,7 +123,7 @@ if selected_subjects == []:
                                        len_trials)
 
 dataset = Data(path_root,
-               'spikeandwave',
+               "spikeandwave",
                selected_subjects,
                len_trials=len_trials)
 
@@ -124,17 +131,17 @@ data, labels, annotated_channels = dataset.all_datasets()
 subject_ids = np.asarray(list(data.keys()))
 
 # Define transform for data augmentation
-if data_augment=="online":
+if data_augment == "online":
 
     affine_scaling = AffineScaling(
         probability=0.5,  # defines the probability of modifying the input
         a_min=0.5,
-        a_max=1.5,
+        a_max=1.7,
     )
 
     zoom = Zoom(
         probability=0.5,  # defines the probability of modifying the input
-        coeff=0.3,
+        coeff=0.1,
     )
 
     channels_shuffle = ChannelsShuffle(
@@ -142,9 +149,14 @@ if data_augment=="online":
         p_shuffle=0.2
     )
 
-    transforms = [affine_scaling, zoom, channels_shuffle]
-elif data_augment=="offline":
+    if single_channel:
+        transforms = [affine_scaling, zoom]
+    else:
+        transforms = [affine_scaling, zoom, channels_shuffle]
+
+elif data_augment == "offline":
     transforms = None
+
 else:
     transforms = None
     data_augment = False
@@ -158,17 +170,17 @@ else:
 for gen_seed in range(1):
     np.random.seed(gen_seed)
     seed_list = [np.random.randint(0, 100)
-                 for _ in range(10)]
-    for i, test_subject_id in enumerate(subject_ids[10:]):
+                 for _ in range(len(selected_subjects))]
+    for i, test_subject_id in enumerate(subject_ids):
         seed = seed_list[i]
         # Labels are the spike events times
         loader = Loader(data,
                         labels,
                         annotated_channels,
-                        data_augment=data_augment,
                         single_channel=single_channel,
                         batch_size=batch_size,
-                        num_workers=num_workers,
+                        balanced=balanced,
+                        data_augment=data_augment,
                         transforms=transforms,
                         subject_LOPO=test_subject_id,
                         seed=seed,
@@ -208,10 +220,11 @@ for gen_seed in range(1):
                                         alpha,
                                         gamma)
         # Define optimizer
-        optimizer = Adam(architecture.parameters(), lr=lr,
+        optimizer = Adam(architecture.parameters(),
+                         lr=lr,
                          weight_decay=weight_decay)
         if scheduler:
-            scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5)
+            scheduler = ReduceLROnPlateau(optimizer, "min", patience=5)
         else:
             scheduler = None
         # Define training pipeline
@@ -225,15 +238,21 @@ for gen_seed in range(1):
                            criterion,
                            single_channel=single_channel,
                            n_epochs=n_epochs,
-                           patience=patience)
+                           patience=patience,
+                           n_good_detection=n_good_detection)
 
         # Train Model
         best_model, history = model.train()
 
         torch.save(
             best_model.state_dict(),
-            "../results/model/model_{}_{}_{}s_{}_subjects".format(method, test_subject_id, len_trials, len(selected_subjects)),
+            "results/model/model_{}_{}_{}s_{}"
+            "_subjects".format(method,
+                               test_subject_id,
+                               len_trials,
+                               len(selected_subjects)),
         )
+
         # Compute test performance and save it
         acc, f1, precision, recall = model.score(test_loader)
         results.append(
@@ -245,7 +264,9 @@ for gen_seed in range(1):
                 "cost_sensitive": cost_sensitive,
                 "focal": focal,
                 "len_trials": len_trials,
+                "n_good_detection": n_good_detection,
                 "test_subject_id": test_subject_id,
+                "balanced": balanced,
                 "data_augment": data_augment,
                 "fold": seed,
                 "acc": acc,
@@ -263,11 +284,11 @@ for gen_seed in range(1):
         if save:
 
             # Save results file as csv
-            if not os.path.exists("../results"):
-                os.mkdir("../results")
+            if not os.path.exists("results"):
+                os.mkdir("results")
 
             results_path = (
-                "../results/csv_LOPO_hyparameters"
+                "results/csv_LOPO_hyparameters"
             )
             if not os.path.exists(results_path):
                 os.mkdir(results_path)

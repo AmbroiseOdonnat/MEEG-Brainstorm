@@ -26,6 +26,7 @@ from .functional import time_reverse
 from .functional import affine_scaling
 from .functional import zoom
 
+
 class Zoom(Transform):
     """Affine trasnformation.
     Parameters

@@ -8,7 +8,6 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 
 import argparse
 import os
-from platform import architecture
 import numpy as np
 import pandas as pd
 
@@ -16,7 +15,8 @@ from loguru import logger
 from torch import nn
 from torch.optim import Adam
 
-from models.architectures import *
+from models.architectures import EEGNet_1D, RNN_self_attention
+from models.architectures import EEGNet, GTN, STT
 from models.training import make_model
 from loader.dataloader import Loader
 from loader.data import Data
@@ -230,7 +230,7 @@ for train_subject_id in subject_ids:
                 os.mkdir(results_path)
 
             results_path = os.path.join(results_path,
-                                        "results_intra_subject_spike_detection_{}-"
+                                        "results_spike_detection_{}-"
                                         "subjects.csv".format(len(subject_ids))
                                         )
             df_results = pd.DataFrame(results)
