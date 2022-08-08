@@ -13,6 +13,7 @@ import wandb
 
 import numpy as np
 import pandas as pd
+import pathlib
 
 from loguru import logger
 from torch import nn
@@ -59,6 +60,7 @@ def get_parser():
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
     parser.add_argument("--balanced", action="store_true")
+    parser.add_argument("--output", type=str, default="../results")
 
     return parser
 
@@ -83,6 +85,7 @@ alpha = args.alpha
 len_trials = args.len_trials
 data_augment = args.data_augment
 balanced = args.balanced
+output = pathlib.Path(args.output)
 
 # Recover params
 weight_decay = 0
