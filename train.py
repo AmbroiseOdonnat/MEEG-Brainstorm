@@ -87,9 +87,8 @@ data_augment = args.data_augment
 balanced = args.balanced
 output = pathlib.Path(args.output)
 
-# Recover params
+# Hardcoded training parameters
 weight_decay = 0
-lr = 1e-3  # Learning rate
 
 # Define device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
