@@ -271,6 +271,7 @@ class make_model():
         # Recover binary prediction
         y_pred = np.concatenate(all_preds)
         y_true = np.concatenate(all_labels)
+        print(f"predicted {np.sum(y_pred)} spike over {len(y_pred)} trials")
 
         # Recover performances
         acc = accuracy_score(y_true, y_pred)
