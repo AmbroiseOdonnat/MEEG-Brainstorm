@@ -12,6 +12,7 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 """
 
 import math
+from copy import deepcopy
 
 import torch
 
@@ -789,3 +790,327 @@ class STT(nn.Module):
         out = self.classifier(code.flatten(1)).squeeze(1)
 
         return out, attention_weights
+
+
+""" ********** Variational Auto-Encoder ********** """
+
+
+class CNN(nn.Module):
+    # TODO: add stride
+    def __init__(
+        self,
+        filters,
+        kernel_size,
+        activation,
+        norm_layer=None,
+        pool_layer=None,
+        pool_size=None,
+        pool_every=None,
+        pool_offset=0,
+        transpose=False,
+        padding=0,
+    ) -> None:
+        # if padding != 0 and len(padding) != len(filters):
+        #     raise Exception("Must either have as many padding sets as filters or none.")
+        super().__init__()
+        kernel_dim = len(kernel_size)
+        if transpose:
+            conv_fun = eval(f"nn.LazyConvTranspose{kernel_dim}d")
+        else:
+            conv_fun = eval(f"nn.LazyConv{kernel_dim}d")
+        if pool_layer and pool_size is None:
+            pool_size = [2] * kernel_dim
+        if pool_layer and pool_every is None:
+            pool_every = 1
+
+        modules = []
+        for i, out_channels in enumerate(filters):
+            if padding:
+                pad = padding[i]
+            else:
+                pad = padding
+            modules.append(conv_fun(out_channels, kernel_size, padding=pad))
+            if norm_layer:
+                modules.append(norm_layer)
+            modules.append(activation)
+            if pool_layer and not (pool_offset + i + 1) % pool_every:
+                modules.append(pool_layer)
+
+        self.cnn = nn.Sequential(*modules)
+
+    def forward(self, x) -> Tensor:
+        return self.cnn(x)
+
+
+class MLP(nn.Module):
+    def __init__(self, neurons, activation, norm_layer=None) -> None:
+        super().__init__()
+        modules = []
+        for out_features in neurons:
+            modules.append(nn.LazyLinear(out_features))
+            if norm_layer:
+                modules.append(norm_layer)
+            modules.append(activation)
+
+
+""" ********** Variational Auto-Encoder ********** """
+
+
+class CNN(nn.Module):
+    # TODO: add stride
+    def __init__(
+        self,
+        filters,
+        kernel_size,
+        activation,
+        norm_layer=None,
+        pool_layer=None,
+        pool_size=None,
+        pool_every=None,
+        pool_offset=0,
+        transpose=False,
+        padding=0,
+    ) -> None:
+        # if padding != 0 and len(padding) != len(filters):
+        #     raise Exception("Must either have as many padding sets as filters or none.")
+        super().__init__()
+        kernel_dim = len(kernel_size)
+        if transpose:
+            conv_fun = eval(f"nn.LazyConvTranspose{kernel_dim}d")
+        else:
+            conv_fun = eval(f"nn.LazyConv{kernel_dim}d")
+        if pool_layer and pool_size is None:
+            pool_size = [2] * kernel_dim
+        if pool_layer and pool_every is None:
+            pool_every = 1
+
+        modules = []
+        for i, out_channels in enumerate(filters):
+            if padding:
+                pad = padding[i]
+            else:
+                pad = padding
+            modules.append(conv_fun(out_channels, kernel_size, padding=pad))
+            if norm_layer:
+                modules.append(norm_layer)
+            modules.append(activation)
+            if pool_layer and not (pool_offset + i + 1) % pool_every:
+                modules.append(pool_layer)
+
+        self.cnn = nn.Sequential(*modules)
+
+    def forward(self, x) -> Tensor:
+        return self.cnn(x)
+
+
+class MLP(nn.Module):
+    def __init__(self, neurons, activation, norm_layer=None) -> None:
+        super().__init__()
+        modules = []
+        for out_features in neurons:
+            modules.append(nn.LazyLinear(out_features))
+            if norm_layer:
+                modules.append(norm_layer)
+            modules.append(activation)
+
+        self.mlp = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.mlp(x)
+
+
+def instantiate_config(config):
+    config_local = deepcopy(config)
+    if config_local.get("norm_layer", None):
+        print(
+            "warning: normalization won't be supported until ivadomed upgrades its pytorch dependancy to torch>=1.9.0"
+        )
+        config_local["norm_layer"] = None
+    # Load required config parameters
+    kernel_size = config_local.get("kernel_size", None)
+    pool_size = config_local.get("pool_size", None)
+    # Deduce dimension of kernels
+    norm_dim = 1 if kernel_size is None else len(kernel_size)
+    pool_dim = norm_dim if pool_size is None else len(pool_size)
+
+    # Supported activations, normalizations and poolings
+    activations = {
+        "leaky_relu": f"nn.LeakyReLU",
+        "relu": f"nn.ReLU",
+        "hard_swish": f"nn.Hardswish",
+    }
+    normalizations = {
+        "batch": f"nn.LazyBatchNorm{norm_dim}d",
+        "layer": f"nn.LayerNorm",
+        "instance": f"nn.LazyInstanceNorm{norm_dim}d",
+    }
+    poolings = {
+        "max": f"MaxPool{pool_dim}d",
+        # "avg": f"AvgPool{pool_dim}d",
+        # "adaptive_max": f"AdaptiveMaxPool{pool_dim}d",
+        # "adaptive_avg": f"AdaptiveAvgPool{pool_dim}d",
+    }
+    unpoolings = {
+        "max": f"MaxUnpool{pool_dim}d",
+    }
+
+    # Dev note: only instantiate the classes actually used in config
+    activation = config_local.get("activation", None)
+    if activation:
+        config_local["activation"] = eval(activations[activation])()
+    norm_layer = config_local.get("norm_layer", None)
+    if norm_layer:
+        config_local["norm_layer"] = eval(normalizations[norm_layer])()
+    pool_layer = config_local.get("pool_layer", None)
+    if pool_layer:
+        if config_local.get("transpose", False):
+            config_local["pool_layer"] = eval(unpoolings[pool_layer])()
+        else:
+            config_local["pool_layer"] = eval(poolings[pool_layer])()
+
+    return config_local
+
+
+class VAEEncoder(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        # TODO: validate CNN and MLP config once loaded
+        config_cnn = config.get("CNN", None)
+        config_mlp = config.get("MLP", None)
+        latent_dim = config.get("latent_dim", 2)
+
+        # Instantiate activation, normalization, pooling
+        config_cnn = instantiate_config(config_cnn)
+        config_mlp = instantiate_config(config_mlp)
+
+        modules = []
+        if config_cnn is not None:
+            modules.append(CNN(**config_cnn))
+        modules.append(nn.Flatten())
+        if config_mlp is not None:
+            modules.append(MLP(**config_mlp))
+        self.encoder = nn.Sequential(*modules)
+
+        # Creation of the latent space mean and variance layers
+        self.mu = nn.Sequential(nn.LazyLinear(latent_dim))
+        self.log_var = nn.Sequential(nn.LazyLinear(latent_dim))
+
+    def forward(self, x):
+        # Encode the example
+        x = self.encoder(x)
+        # Get mean and variance of the latent variables for the example
+        mu = self.mu(x)
+        log_var = self.log_var(x)
+        return mu, log_var
+
+
+class VAEDecoder(nn.Module):
+    def __init__(self, config, shape, decoder_config=False):
+        super().__init__()
+        # TODO: validate CNN and MLP config once loaded
+        config_cnn = config.get("CNN", None)
+        config_mlp = config.get("MLP", None)
+
+        # Change CNN and MLP config to be reversed encoder
+        if not decoder_config:
+            # CNN
+            if config_cnn:
+                filters = config_cnn["filters"]
+                kernel = config_cnn["kernel_size"]
+                stride = config_cnn.get("stride", 1)
+                cnn_out_dims = out_size_CNN(shape[1:], kernel, stride, n=len(filters))
+                target_ctnn_out_dims = np.flip(cnn_out_dims, 0)
+                ctnn_out_dims = np.apply_along_axis(
+                    out_size_CNN,
+                    1,
+                    target_ctnn_out_dims,
+                    kernel,
+                    stride,
+                    n=1,
+                    transpose=True,
+                )[:, 1]
+                padding = list(
+                    map(tuple, target_ctnn_out_dims[1:] - ctnn_out_dims[:-1])
+                )
+                preflattened_dim = (
+                    filters[-1],
+                    int(cnn_out_dims[-1, 0]),
+                    int(cnn_out_dims[-1, 1]),
+                )
+                flattened_dim = filters[-1] * np.prod(cnn_out_dims[-1])
+
+                # Update CNN config
+                config_cnn["filters"] = reversed(config_cnn["filters"])
+                config_cnn["padding"] = padding
+                config_cnn["transpose"] = True
+                if config_cnn.get("pool_every", None):
+                    config_cnn["pool_offset"] = len(filters) % config_cnn["pool_every"]
+            else:
+                preflattened_dim = shape
+                flattened_dim = np.prod(np.asarray(shape))
+
+            # Update MLP config
+            if config_mlp:
+                config_mlp["neurons"] = reversed(config_mlp["neurons"])
+
+        # Instantiate activation, normalization, pooling
+        config_cnn = instantiate_config(config_cnn)
+        config_mlp = instantiate_config(config_mlp)
+
+        modules = []
+        if config_mlp is not None:
+            modules.append(MLP(**config_mlp))
+        modules.append(nn.LazyLinear(flattened_dim))
+        modules.append(nn.Unflatten(1, preflattened_dim))
+        if config_cnn is not None:
+            modules.append(CNN(**config_cnn))
+        self.decoder = nn.Sequential(*modules)
+
+    def forward(self, x):
+        return self.decoder(x)
+
+
+class VAE(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+
+        # Computing the dims required by the flattening and unflattening ops
+        self.encoder = VAEEncoder(config["encoder"])
+        self.decoder = VAEDecoder(config["encoder"], config["shape"])
+
+    def forward(self, x):
+        mu, log_var = self.encoder(x)
+        # Sample from the latent space
+        z = self.sample_latent_space(mu, log_var)
+        # Decode the sample
+        x_hat = self.decoder(z)
+
+        return x_hat, mu, log_var
+
+    def sample_latent_space(self, mu, log_var):
+        return mu + torch.mul(torch.exp(log_var / 2.0), torch.randn_like(log_var))
+
+    def encode(self, x, sample=True):
+        # Get mean and variance of the latent variables from the encoded example
+        mu, log_var = self.encoder(x)
+
+        if sample:
+            # Sample from the latent space
+            z = self.sample_latent_space(mu, log_var)
+            return z
+        else:
+            return mu, log_var
+
+    def decode(self, z, sample=False):
+        # Decode the sample
+        decoded = self.decoder(z)
+        if sample:
+            """# Get mean and variance of the output values from the decoded sample
+            mus = decoded[:, 0::2, :, :]
+            log_vars = decoded[:, 1::2, :, :]
+            # Sample from the parameters
+            sampled = self.sample_latent_space(mus, log_vars)
+            return sampled"""
+            pass
+        else:
+            return decoded

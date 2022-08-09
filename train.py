@@ -7,6 +7,7 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 """
 
 import argparse
+import json
 import os
 import torch
 import wandb
@@ -20,7 +21,7 @@ from torch import nn
 from torch.optim import Adam
 
 from models.architectures import EEGNet_1D, RNN_self_attention
-from models.architectures import EEGNet, GTN, STT
+from models.architectures import EEGNet, GTN, STT, VAE
 from models.training import make_model
 from loader.dataloader import Loader
 from loader.data import Data
@@ -60,6 +61,7 @@ def get_parser():
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
     parser.add_argument("--balanced", action="store_true")
+    parser.add_argument("--model_config", type=str, default=None)
     parser.add_argument("--output", type=str, default="../results")
 
     return parser
@@ -85,6 +87,13 @@ alpha = args.alpha
 len_trials = args.len_trials
 data_augment = args.data_augment
 balanced = args.balanced
+if args.model_config:
+    if os.path.exists(args.model_config):
+        model_config = json.load(args.model_config)
+    else:
+        raise Exception(
+            f"The model config file has to exist. {args.model_config} doesn't exist."
+        )
 output = pathlib.Path(args.output)
 
 # Hardcoded training parameters
@@ -94,7 +103,10 @@ weight_decay = 0
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define loss
-criterion = nn.BCEWithLogitsLoss().to(device)
+if architecture == "beta-VAE":
+    criterion = None
+else:
+    criterion = nn.BCEWithLogitsLoss().to(device)
 
 # Recover results
 results = []
@@ -106,10 +118,11 @@ assert architecture in ("EEGNet",
                         "EEGNet_1D",
                         "GTN",
                         "RNN_self_attention",
-                        "STT")
+                        "STT", 
+                        "beta-VAE")
 
 logger.info(f"architecture used: {architecture}")
-if architecture in ["EEGNet_1D", "RNN_self_attention"]:
+if architecture in ["EEGNet_1D", "RNN_self_attention", "beta-VAE"]:
     single_channel = True
 else:
     single_channel = False
@@ -195,6 +208,8 @@ elif architecture == "RNN_self_attention":
 elif architecture == "STT":
     n_time_points = len(data[subject_ids[0]][0][0][0])
     architecture = STT(n_time_points=n_time_points)
+elif architecture == "beta-VAE":
+    architecture = VAE(model_config)
 architecture.apply(reset_weights)
 
 if weight_loss:
@@ -221,16 +236,30 @@ optimizer = Adam(architecture.parameters(),
 # Define training pipeline
 architecture = architecture.to(device)
 
-model = make_model(architecture,
-                   train_loader,
-                   val_loader,
-                   optimizer,
-                   train_criterion,
-                   criterion,
-                   single_channel=single_channel,
-                   n_epochs=n_epochs,
-                   patience=patience,
-                   n_good_detection=n_good_detection)
+if architecture == "beta-VAE":
+    model = make_model(architecture,
+                       train_loader,
+                       val_loader,
+                       optimizer,
+                       train_criterion,
+                       criterion,
+                       single_channel=single_channel,
+                       n_epochs=n_epochs,
+                       patience=patience,
+                       n_good_detection=n_good_detection,
+                       beta=model_config["beta"],
+                       unsupervised=True)
+else:
+    model = make_model(architecture,
+                       train_loader,
+                       val_loader,
+                       optimizer,
+                       train_criterion,
+                       criterion,
+                       single_channel=single_channel,
+                       n_epochs=n_epochs,
+                       patience=patience,
+                       n_good_detection=n_good_detection)
 
 # Train Model
 best_model = model.train()
@@ -245,9 +274,10 @@ wandb.summary['test_precision'] = precision
 wandb.summary['test_recall'] = recall
 wandb.finish()
 
-print("Mean accuracy \t Mean F1-score \t Mean precision \t Mean recall")
-print("-" * 80)
-print(
-    f"{mean_acc/steps:0.4f} \t {mean_f1/steps:0.4f} \t"
-    f"{mean_precision/steps:0.4f} \t {mean_recall/steps:0.4f}\n"
-)
+if architecture != "beta-VAE":
+    print("Mean accuracy \t Mean F1-score \t Mean precision \t Mean recall")
+    print("-" * 80)
+    print(
+        f"{mean_acc/steps:0.4f} \t {mean_f1/steps:0.4f} \t"
+        f"{mean_precision/steps:0.4f} \t {mean_recall/steps:0.4f}\n"
+    )

@@ -287,3 +287,22 @@ def xavier_initialization(m):
         torch.manual_seed(42)
         torch.nn.init.xavier_uniform_(m.weight)
         m.bias.data.fill_(0.01)
+
+
+def out_size_CNN(in_size, kernel_size, stride, n=1, transpose=False, output_padding=0):
+    # TODO: add pooling in dimension computations
+    # Initialize the size list
+    size_list = np.zeros((n + 1, len(kernel_size)))
+    # Set the first list element to the input size
+    size_list[0] = in_size
+
+    for i in np.arange(n) + 1:
+        # Set the output size of the current layer
+        if transpose:
+            size_list[i] = (
+                (size_list[i - 1] - 1) * stride + kernel_size + output_padding
+            )
+        else:
+            size_list[i] = np.floor((size_list[i - 1] - kernel_size) / stride + 1)
+
+    return size_list.astype(int)

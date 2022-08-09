@@ -129,14 +129,34 @@ class FocalLoss(nn.Module):
         return loss
 
 
-def get_criterion(criterion,
-                  cost_sensitive,
-                  lambd,
-                  focal,
-                  alpha,
-                  gamma):
+class KullbackLeiblerLoss(nn.Module):
+    def __init__(self):
+        super(KullbackLeiblerLoss, self).__init__()
 
-    """ Get criterion.
+    # TODO: check equation validity
+    def forward(self, mu, log_var):
+        kl = torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+        kl = torch.sum(kl, -1)
+        kl *= -0.5
+        return kl
+
+
+class BetaVAELoss(nn.Module):
+    def __init__(self, beta):
+        super(BetaVAELoss, self).__init__()
+        self.beta = beta
+
+    def forward(self, model, x):
+        x_hat, mu, log_var = model(x)
+
+        reconstruction_loss = torch.pow(x - x_hat, 2).mean() * x[0].nelement()
+        kl_loss = KullbackLeiblerLoss()(mu, log_var)
+        return reconstruction_loss + self.beta * kl_loss
+
+
+def get_criterion(criterion, cost_sensitive, lambd, focal, alpha, gamma):
+
+    """Get criterion.
 
     Args:
         criterion (Criterion): Binary Cross-Entropy with logits loss.

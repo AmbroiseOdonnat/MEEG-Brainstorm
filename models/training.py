@@ -16,6 +16,7 @@ import numpy as np
 
 from sklearn.metrics import precision_score, recall_score
 from sklearn.metrics import f1_score, accuracy_score
+from utils.losses import BetaVAELoss
 from torch import nn
 
 
@@ -31,7 +32,9 @@ class make_model():
                  single_channel,
                  n_epochs,
                  patience=None,
-                 n_good_detection=1):
+                 n_good_detection=1,
+                 beta=1,
+                 unsupervised=False):
 
         """
         Args:
@@ -59,6 +62,8 @@ class make_model():
         self.n_epochs = n_epochs
         self.patience = patience
         self.n_good_detection = n_good_detection
+        self.beta = beta
+        self.unsupervised = unsupervised
         self.sigmoid = nn.Sigmoid()
 
     def _do_train(self,
@@ -93,13 +98,15 @@ class make_model():
             batch_y = batch_y.to(torch.float).to(device=device)
 
             # Optimizer
-
             optimizer.zero_grad()
 
             # Forward
-            output, _ = model(batch_x)
-            loss = criterion(output, batch_y)
-            pred = self.sigmoid(output)
+            if self.unsupervised:
+                loss = BetaVAELoss(self.beta)(model, batch_x)
+            else:
+                output, _ = model(batch_x)
+                loss = criterion(output, batch_y)
+                pred = self.sigmoid(output)
 
             # Backward
             loss.backward()
@@ -108,20 +115,25 @@ class make_model():
 
             # Recover loss and prediction
             train_loss.append(loss.item())
-            all_preds.append(pred.detach().cpu().numpy())
-            all_labels.append(batch_y.detach().cpu().numpy())
+            if not self.unsupervised:
+                all_preds.append(pred.detach().cpu().numpy())
+                all_labels.append(batch_y.detach().cpu().numpy())
 
-        # Recover binary prediction
-        y_pred = np.concatenate(all_preds)
-        y_pred_binary = 1 * (y_pred > 0.5)
-        y_true = np.concatenate(all_labels)
-
-        # Recover mean loss and F1-score
+        # Recover mean loss
         train_loss = np.mean(train_loss)
-        perf = f1_score(y_true, y_pred_binary, average='binary',
-                        zero_division=1)
 
-        return train_loss, perf
+        if self.unsupervised:
+            return train_loss, None
+        else:
+            # Recover binary prediction
+            y_pred = np.concatenate(all_preds)
+            y_pred_binary = 1 * (y_pred > 0.5)
+            y_true = np.concatenate(all_labels)
+
+            # Recover F1-score
+            perf = f1_score(y_true, y_pred_binary, average="binary", zero_division=1)
+
+            return train_loss, perf
 
     def _validate(self,
                   model,
@@ -154,25 +166,33 @@ class make_model():
                 batch_y = batch_y.to(torch.float).to(device=device)
 
                 # Forward
-                output, _ = model.forward(batch_x)
-                pred = 1*(self.sigmoid(output).cpu().numpy() > 0.5)
+                if self.unsupervised:
+                    val_loss[idx_batch] = BetaVAELoss(self.beta)(model, batch_x)
+                else:
+                    output, _ = model.forward(batch_x)
+                    pred = 1 * (self.sigmoid(output).cpu().numpy() > 0.5)
 
-                # Recover loss and prediction
-                loss = criterion(output, batch_y)
+                    # Recover loss and prediction
+                    loss = criterion(output, batch_y)
 
-                val_loss[idx_batch] = loss.item()
-                all_preds.append(pred)
-                all_labels.append(batch_y.cpu().numpy())
-        # Recover binary prediction
-        y_pred = np.concatenate(all_preds)
-        y_true = np.concatenate(all_labels)
+                    val_loss[idx_batch] = loss.item()
+                    all_preds.append(pred)
+                    all_labels.append(batch_y.cpu().numpy())
 
-        # Recover mean loss and F1-score
+        # Recover mean loss
         val_loss = np.mean(val_loss)
-        perf = f1_score(y_true, y_pred, average='binary',
-                        zero_division=1)
 
-        return val_loss, perf
+        if self.unsupervised:
+            return val_loss, None
+        else:
+            # Recover binary prediction
+            y_pred = np.concatenate(all_preds)
+            y_true = np.concatenate(all_labels)
+
+            # Recover mean loss and F1-score
+            perf = f1_score(y_true, y_pred, average="binary", zero_division=1)
+
+            return val_loss, perf
 
     def train(self):
 
@@ -234,60 +254,54 @@ class make_model():
         return self.best_model
 
     def score(self, test_loader):
+        if self.unsupervised:
+            raise NotImplementedError(
+                "Scoring have not been implemented yet for none-classifier models."
+            )
+            # TODO: Implement scoring
+        else:
+            # Compute performance on test set
+            self.best_model.eval()
+            device = next(self.best_model.parameters()).device
 
-        # Compute performance on test set
-        self.best_model.eval()
-        device = next(self.best_model.parameters()).device
+            all_preds, all_labels = list(), list()
+            with torch.no_grad():
+                for batch_x, batch_y in test_loader:
+                    batch_x = batch_x.to(torch.float).to(device=device)
+                    batch_y = batch_y.to(torch.float).to(device=device)
 
-        all_preds, all_labels = list(), list()
-        with torch.no_grad():
-            for batch_x, batch_y in test_loader:
-                batch_x = batch_x.to(torch.float).to(device=device)
-                batch_y = batch_y.to(torch.float).to(device=device)
+                    # Forward
+                    if self.single_channel:
+                        preds = np.zeros((batch_x.shape[0], batch_x.shape[2]))
+                        for i in range(batch_x.shape[2]):
+                            output, _ = self.best_model.forward(batch_x[:, :, i])
+                            pred = self.sigmoid(output).cpu().numpy() > 0.5
+                            preds[:, i] = pred
+                        pred = 1 * (np.sum(preds, axis=1) >= self.n_good_detection)
+                    else:
 
-                # Forward
-                if self.single_channel:
-                    preds = np.zeros((batch_x.shape[0], batch_x.shape[2]))
-                    for i in range(batch_x.shape[2]):
-                        output, _ = self.best_model.forward(batch_x[:, :, i])
-                        pred = (self.sigmoid(output).cpu().numpy() > 0.5)
-                        preds[:, i] = pred
-                    pred = 1*(np.sum(preds, axis=1) >= self.n_good_detection)
-                else:
+                        output, _ = self.best_model.forward(batch_x)
+                        pred = 1 * (self.sigmoid(output).cpu().numpy() > 0.5)
 
-                    output, _ = self.best_model.forward(batch_x)
-                    pred = 1*(self.sigmoid(output).cpu().numpy() > 0.5)
+                    # Recover prediction
+                    all_preds.append(pred)
+                    all_labels.append(batch_y.cpu().numpy())
 
-                # Recover prediction
-                all_preds.append(pred)
-                all_labels.append(batch_y.cpu().numpy())
+            # Recover binary prediction
+            y_pred = np.concatenate(all_preds)
+            y_true = np.concatenate(all_labels)
 
-        # Recover binary prediction
-        y_pred = np.concatenate(all_preds)
-        y_true = np.concatenate(all_labels)
-        print(f"predicted {np.sum(y_pred)} spike over {len(y_pred)} trials")
+            # Recover performances
+            acc = accuracy_score(y_true, y_pred)
+            f1 = f1_score(y_true, y_pred, average="binary", zero_division=1)
+            precision = precision_score(
+                y_true, y_pred, average="binary", zero_division=1
+            )
+            recall = recall_score(y_true, y_pred, average="binary", zero_division=1)
 
-        # Recover performances
-        acc = accuracy_score(y_true, y_pred)
-        f1 = f1_score(y_true,
-                      y_pred,
-                      average='binary',
-                      zero_division=1)
-        precision = precision_score(y_true,
-                                    y_pred,
-                                    average='binary',
-                                    zero_division=1)
-        recall = recall_score(y_true,
-                              y_pred,
-                              average='binary',
-                              zero_division=1)
+            print("Performances on test")
+            print("Acc \t F1 \t Precision \t Recall")
+            print("-" * 80)
+            print(f"{acc:0.4f} \t {f1:0.4f} \t" f"{precision:0.4f} \t {recall:0.4f}\n")
 
-        print("Performances on test")
-        print("Acc \t F1 \t Precision \t Recall")
-        print("-" * 80)
-        print(
-            f"{acc:0.4f} \t {f1:0.4f} \t"
-            f"{precision:0.4f} \t {recall:0.4f}\n"
-        )
-
-        return (acc, f1, precision, recall)
+            return (acc, f1, precision, recall)
