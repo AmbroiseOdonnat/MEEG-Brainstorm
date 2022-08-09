@@ -32,25 +32,32 @@ metric = args.metric
 
 # # concatene all the dataframe
 # df = pd.concat([pd.read_csv(fname) for fname in fnames], axis=0)
-df = pd.read_csv("/home/GRAMES.POLYMTL.CA/p117205/data_nvme_p117205/MEEG-Brainstorm/results/csv_LOPO_hyperparameters/results_LOPO_spike_detection_20-subjects.csv")
+df = pd.read_csv("/home/GRAMES.POLYMTL.CA/p117205/data_nvme_p117205/MEEG-Brainstorm/results/csv_LOPO_hyparameters/results_LOPO_spike_detection_20-subjects.csv")
 fig = plt.figure()
 
 data = df
-sns.boxplot(data=data.loc[(data["len_trials"] == 2) & (data["n_good_detection"] == 3)],
+sns.boxplot(data=data.loc[(data["len_trials"] == 3) &
+                          (data["n_good_detection"] == 1) &
+                          (data["balanced"] == True) &
+                          (data["weight_loss"] == False) &
+                          (data["cost_sensitive"] == False)],
             x="method",
             y=metric,
-            hue="data_augment",
+            hue="focal",
             palette="Set2")
 
-sns.swarmplot(data=data.loc[(data["len_trials"] == 2) & (data["n_good_detection"] == 3)],
-              x="method",
-              y=metric,
-              hue="data_augment",
-              dodge=True,
-              palette="tab10")
+# sns.swarmplot(data=data.loc[(data["len_trials"] == 3) &
+#                             (data["n_good_detection"] == 1) &
+#                             (data["balanced"] == True) &
+#                             (data["weight_loss"] == False) &
+#                             (data["cost_sensitive"] == False)],
+#               x="method",
+#               y=metric,
+#               hue="focal",
+#               palette="tab10")
 
 plt.tight_layout()
-plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title="Focal loss")
 
 fig.savefig(
             "results/images/results_LOPO"
@@ -59,8 +66,12 @@ fig.savefig(
             bbox_inches="tight",
            )
 fig = plt.figure()
-
-sns.lineplot(data=data.loc[(data["method"] == "RNN_self_attention") & (data["data_augment"] == "False")],
+sns.lineplot(data=data.loc[(data["method"] == "RNN_self_attention") &
+                           (data["data_augment"] == "False") &
+                           (data["balanced"] == True) &
+                           (data["focal"] == False) &
+                           (data["weight_loss"] == False) &
+                           (data["cost_sensitive"] == False)],
              x="n_good_detection",
              y=metric,
              hue="len_trials",
@@ -72,24 +83,36 @@ plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 fig.savefig(
             "results/images/results_LOPO"
             "_{}_{}_subjects_lineplot_rnn.png".format(metric,
-                                                  20),
+                                                      20),
             bbox_inches="tight",
            )
 # print results
 print(df.groupby(["method",
                   "data_augment",
+                  "weight_loss",
+                  "cost_sensitive",
+                  "balanced",
+                  "focal",
                   "len_trials",
                   "n_good_detection"]).mean().reset_index())
 
 print(df.groupby(["method",
                   "data_augment",
+                  "weight_loss",
+                  "cost_sensitive",
+                  "balanced",
+                  "focal",
                   "len_trials",
                   "n_good_detection"]).std().reset_index())
 
 mean_data = data.groupby(["method",
-                  "data_augment",
-                  "len_trials",
-                  "n_good_detection"]).mean().reset_index()
+                          "data_augment",
+                          "weight_loss",
+                          "cost_sensitive",
+                          "balanced",
+                          "focal",
+                          "len_trials",
+                          "n_good_detection"]).mean().reset_index()
 
 row_max = mean_data["f1"].idxmax()
 print(mean_data.iloc[row_max])
