@@ -74,7 +74,7 @@ def get_alpha(labels):
 
     # Compute the corresponding weights
     alpha = maj / (maj+mino)
-  
+
     return alpha
 
 
@@ -162,21 +162,20 @@ def get_pos_weight(labels):
     """
 
     neg, pos = 0, 0
-    for id in range(len(labels)):
-        for n_sess in range(len(labels[id])):
-            for n_trial in range(len(labels[id][n_sess])):
-                label = labels[id][n_sess][n_trial]
-                if label == 1:
-                    pos += 1
-                else:
-                    neg += 1
+    for n_trial in range(len(labels)):
+
+        label = labels[n_trial]
+        if label == 1:
+            pos += 1
+        else:
+            neg += 1
 
     # Compute the corresponding weights
     if pos:
         pos_weight = torch.as_tensor(neg / pos)
     else:
         pos_weight = torch.ones(1)
-        
+
     return 2 * pos_weight
 
 
@@ -200,11 +199,12 @@ def normal_initialization(m):
         m (nn.Module): Model.
     """
 
-    if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv2d): 
+    if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv2d):
         torch.manual_seed(42)
         m.weight.data.normal_(mean=0.0, std=0.02)
         if m.bias is not None:
             m.bias.data.zero_()
+
 
 def pad_tensor(x,
                n_pads,
@@ -268,7 +268,7 @@ def xavier_initialization(m):
     Args:
         m (nn.Module): Model.
     """
-    
+
     if isinstance(m, torch.nn.Linear) or isinstance(m, torch.nn.Conv2d):
         torch.manual_seed(42)
         torch.nn.init.xavier_uniform_(m.weight)
