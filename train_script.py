@@ -9,7 +9,11 @@ def get_parser():
     parser = argparse.ArgumentParser(
         "Spike detection", description="Epileptic spike detection"
     )
-    parser.add_argument("--path_root", type=str, default="../IvadomedNifti/")
+    parser.add_argument("--path_root",
+                        type=str,
+                        default="/home/GRAMES.POLYMTL.CA/p117205/"
+                                "duke/projects/ivadomed/MEEG-Brainstorm/"
+                                "EEG_Epilepsy_27_subjects/")
 
     parser.add_argument("--len_trials", type=float, nargs="+",
                         default=[1])
@@ -47,7 +51,7 @@ for method in methods:
         for n_good_detection in n_good_detections:
             os.system("python train_LOPO.py"
                       " --save --method {} --gpu_id {}"
-                      " --balanced --n_subjects 20 "
+                      " --balanced --cost_sensitive --n_subjects 20 "
                       "--len_trials {} --n_good_detection {}"
                       .format(method,
                               gpu_id,
