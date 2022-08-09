@@ -212,8 +212,8 @@ class Loader():
                 for i in range(len(data[subject_id])):
                     n_spikes = np.sum(labels[subject_id][i])
                     n = len(labels[subject_id][i])
-                    if n_spikes/n < 0.3:
-                        n_no_spike_to_remove = ((n-n_spikes) - n_spikes)
+                    if n_spikes/n < 0.25:
+                        n_no_spike_to_remove = ((n-n_spikes) - 3*n_spikes)
                         pos_no_spike = np.where(labels[subject_id][i] == 0)
                         no_spike_to_remove = np.random.choice(
                                                     pos_no_spike[0],
