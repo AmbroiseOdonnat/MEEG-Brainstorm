@@ -207,6 +207,26 @@ class Loader():
         print('Test on: {}, '
               'Validation on: {}'.format(self.subject_LOPO,
                                          val_subject_ids))
+        for subject_id in train_subject_ids:
+            for i in range(len(data[subject_id])):
+                n_spikes = np.sum(labels[subject_id][i])
+                n = len(labels[subject_id][i])
+                if n_spikes == 0:
+                    labels[subject_id][i] = np.delete(
+                                                labels[subject_id][i],
+                                                np.linspace(
+                                                    0,
+                                                    n-1,
+                                                    n,
+                                                    dtype=int))
+                    data[subject_id][i] = np.delete(
+                                                data[subject_id][i],
+                                                np.linspace(
+                                                    0,
+                                                    n-1,
+                                                    n,
+                                                    dtype=int),
+                                                axis=0)
         if self.balanced:
             for subject_id in train_subject_ids:
                 for i in range(len(data[subject_id])):
