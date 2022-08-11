@@ -87,7 +87,7 @@ class FocalLoss(nn.Module):
         """
         Args:
             alpha (float).
-            gamma (float). 
+            gamma (float).
         """
 
         super().__init__()
@@ -122,13 +122,13 @@ class FocalLoss(nn.Module):
         if self.alpha > 0:
             alpha_t = self.alpha * targets + (1-self.alpha) * (1-targets)
             loss *= alpha_t
-    
+
         # Mean reduction
         loss = loss.mean()
 
         return loss
 
-    
+
 def get_criterion(criterion,
                   cost_sensitive,
                   lambd,
