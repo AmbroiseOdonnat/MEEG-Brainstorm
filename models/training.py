@@ -190,6 +190,7 @@ class make_model():
         self.best_model = copy.deepcopy(self.model)
         print("epoch \t train_loss \t val_loss \t train_f1 \t val_f1")
         print("-" * 80)
+        waiting = 0
 
         for epoch in range(1, self.n_epochs + 1):
             train_loss, train_perf = self._do_train(self.model,
