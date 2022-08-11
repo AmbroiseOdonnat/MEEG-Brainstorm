@@ -174,7 +174,9 @@ for gen_seed in range(1):
         config.update({"test_subject_id": test_subject_id,
                        "seed": seed})
         reset_wandb_env()
-        with wandb.init(reinit=True, config=config):
+        with wandb.init(project="spike-detection-LOPO",
+                        group=name_group,
+                        config=config):
             # Labels are the spike events times
             loader = Loader(data,
                             labels,
