@@ -1,0 +1,25 @@
+program: train_LOPO.py
+method: random
+metric:
+  name: val_loss
+  goal: minimize
+parameters:
+  lr:
+    min: 0.0001
+    max: 0.1
+  batch_size:
+    distribution: q_log_uniform_values
+    q: 8
+    min: 16
+    max: 256
+  architecture:
+    value: RNN_self_attention
+  n_good_detection:
+    values: [1, 2, 3, 4, 5]
+  len_trials:
+    values: [0.5, 1, 2, 3, 4, 5]
+command:
+  - ${interpreter}
+  - ${program}
+  - "--balanced"
+  - ${args}
