@@ -12,6 +12,8 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 """
 
 import math
+import numpy as np
+
 from copy import deepcopy
 
 import torch
@@ -23,7 +25,7 @@ from einops.layers.torch import Rearrange
 from torch import nn
 from torch import Tensor
 from utils.utils_ import xavier_initialization, normal_initialization
-
+from utils.utils_ import out_size_CNN
 
 """ ********** Mish activation ********** """
 
@@ -923,7 +925,9 @@ def instantiate_config(config):
     config_local = deepcopy(config)
     if config_local.get("norm_layer", None):
         print(
-            "warning: normalization won't be supported until ivadomed upgrades its pytorch dependancy to torch>=1.9.0"
+            "warning: normalization won't be supported"
+            "until ivadomed upgrades its pytorch"
+            "dependancy to torch>=1.9.0"
         )
         config_local["norm_layer"] = None
     # Load required config parameters
@@ -1091,7 +1095,8 @@ class VAE(nn.Module):
         return mu + torch.mul(torch.exp(log_var / 2.0), torch.randn_like(log_var))
 
     def encode(self, x, sample=True):
-        # Get mean and variance of the latent variables from the encoded example
+        # Get mean and variance of the latent variables
+        # from the encoded example
         mu, log_var = self.encoder(x)
 
         if sample:
@@ -1105,7 +1110,8 @@ class VAE(nn.Module):
         # Decode the sample
         decoded = self.decoder(z)
         if sample:
-            """# Get mean and variance of the output values from the decoded sample
+            """# Get mean and variance of the output
+            values from the decoded sample
             mus = decoded[:, 0::2, :, :]
             log_vars = decoded[:, 1::2, :, :]
             # Sample from the parameters

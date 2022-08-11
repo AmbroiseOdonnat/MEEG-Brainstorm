@@ -89,7 +89,8 @@ data_augment = args.data_augment
 balanced = args.balanced
 if args.model_config:
     if os.path.exists(args.model_config):
-        model_config = json.load(args.model_config)
+        with open(args.model_config, 'r') as f:
+            model_config = json.load(f)
     else:
         raise Exception(
             f"The model config file has to exist. {args.model_config} doesn't exist."
