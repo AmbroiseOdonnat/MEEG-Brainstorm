@@ -356,14 +356,6 @@ class Loader():
                 x = data[self.subject_LOPO][n_sess][n_trial]
                 y = labels[self.subject_LOPO][n_sess][n_trial]
                 chan = self.annotated_channels[self.subject_LOPO][n_sess]
-                # if self.single_channel:
-                #     # Select only the channels where a spike occurs
-                #     if len(chan) != 0:
-                #         x = x[chan]
-                #     for i in range(x.shape[0]):
-                #         test_data.append(x[i].reshape((1, len(x[i]))))
-                #         test_labels.append(y)
-                # else:
                 test_data.append(x)
                 test_labels.append(y)
 
@@ -439,7 +431,7 @@ class Loader():
             x = (x-target_mean) / target_std
             if self.single_channel:
                 # Select only the channels where a spike occurs
-                if chan != []:
+                if len(chan) != 0:
                     x = x[:, chan]
                 for i in range(x.shape[1]):
                     train_data.append(x[:, i])
@@ -452,7 +444,7 @@ class Loader():
             x = (x-target_mean) / target_std
             if self.single_channel:
                 # Select only the channels where a spike occurs
-                if chan != []:
+                if len(chan) != 0:
                     x = x[:, chan]
                 for i in range(x.shape[1]):
                     val_data.append(x[:, i])
@@ -470,6 +462,7 @@ class Loader():
                                 transforms=self.transforms)
         val_dataset = Dataset(val_data, val_labels, transforms=None)
         test_dataset = Dataset(test_data, test_labels, transforms=None)
+        print(len(train_labels), np.sum(train_labels)/len(train_labels))
 
         train_loader = DataLoader(dataset=train_dataset,
                                   batch_size=self.batch_size,
