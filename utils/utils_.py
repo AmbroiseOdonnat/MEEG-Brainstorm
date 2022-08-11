@@ -30,36 +30,6 @@ def reset_wandb_env():
             del os.environ[k]
 
 
-def define_device(gpu_id):
-
-    """ Define the device used for the process of interest.
-
-    Args:
-        gpu_id (int): ID of the cuda device.
-
-    Returns:
-        cuda_available (bool): If True, cuda is available.
-        device (str): Cuda device.
-    """
-
-    device = torch.device("cuda:" + str(gpu_id) if torch.cuda.is_available()
-                          else "cpu")
-    cuda_available = torch.cuda.is_available()
-
-    # Check cuda availability
-    if cuda_available:
-
-        # Set the GPU
-        gpu_id = int(gpu_id)
-        torch.cuda.set_device(gpu_id)
-        logger.info(f"Using GPU ID {gpu_id}")
-    else:
-        logger.info("Cuda is not available.")
-        logger.info("Working on {}.".format(device))
-
-    return cuda_available, device
-
-
 def get_alpha(labels):
 
     """
