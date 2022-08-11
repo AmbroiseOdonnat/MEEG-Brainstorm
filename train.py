@@ -116,10 +116,10 @@ path_subject_info = (
     "results/info_subject_{}".format(len_trials)
 )
 
-    selected_subjects = select_subject(n_subjects,
-                                       path_subject_info,
-                                       path_root,
-                                       len_trials)
+selected_subjects = select_subject(n_subjects,
+                                   path_subject_info,
+                                   path_root,
+                                   len_trials)
 
 dataset = Data(path_root,
                "spikeandwave",
@@ -129,24 +129,24 @@ dataset = Data(path_root,
 data, labels, annotated_channels = dataset.all_datasets()
 subject_ids = np.asarray(list(data.keys()))
 
-    # Define transform for data augmentation
+# Define transform for data augmentation
 if data_augment == "online":
 
-        affine_scaling = AffineScaling(
+    affine_scaling = AffineScaling(
         probability=0.5,  # defines the probability of modifying the input
         a_min=0.5,
         a_max=1.7,
-        )
+    )
 
     zoom = Zoom(
         probability=0.5,  # defines the probability of modifying the input
         coeff=0.1,
-        )
+    )
 
-        channels_shuffle = ChannelsShuffle(
+    channels_shuffle = ChannelsShuffle(
         probability=0.5,  # defines the probability of modifying the input
-            p_shuffle=0.2
-        )
+        p_shuffle=0.2
+    )
 
     if single_channel:
         transforms = [affine_scaling, zoom]
@@ -154,7 +154,7 @@ if data_augment == "online":
         transforms = [affine_scaling, zoom, channels_shuffle]
 
 elif data_augment == "offline":
-        transforms = None
+    transforms = None
 
 else:
     transforms = None
@@ -164,79 +164,79 @@ else:
 config = vars(args)
 wandb.init(project="spike_detection", config=config)
 
-    loader = Loader(data,
-                    labels,
-                    annotated_channels,
-                    single_channel=single_channel,
-                    batch_size=batch_size,
+loader = Loader(data,
+                labels,
+                annotated_channels,
+                single_channel=single_channel,
+                batch_size=batch_size,
                 balanced=balanced,
                 data_augment=data_augment,
-                    transforms=transforms,
-                    )
+                transforms=transforms,
+                )
 
-    train_loader, val_loader, test_loader, train_labels = loader.load()
+train_loader, val_loader, test_loader, train_labels = loader.load()
 
-    # Define architecture
+# Define architecture
 if architecture == "EEGNet":
-        architecture = EEGNet()
-        warmup = False
+    architecture = EEGNet()
+    warmup = False
 if architecture == "EEGNet_1D":
-        architecture = EEGNet_1D()
-        warmup = False
+    architecture = EEGNet_1D()
+    warmup = False
 elif architecture == "GTN":
-        n_time_points = len(data[subject_ids[0]][0][0][0])
-        architecture = GTN(n_time_points=n_time_points)
+    n_time_points = len(data[subject_ids[0]][0][0][0])
+    architecture = GTN(n_time_points=n_time_points)
 elif architecture == "RNN_self_attention":
-        n_time_points = len(data[subject_ids[0]][0][0][0])
-        architecture = RNN_self_attention(n_time_points=n_time_points)
-        warmup = False
+    n_time_points = len(data[subject_ids[0]][0][0][0])
+    architecture = RNN_self_attention(n_time_points=n_time_points)
+    warmup = False
 elif architecture == "STT":
-        n_time_points = len(data[subject_ids[0]][0][0][0])
-        architecture = STT(n_time_points=n_time_points)
-    architecture.apply(reset_weights)
+    n_time_points = len(data[subject_ids[0]][0][0][0])
+    architecture = STT(n_time_points=n_time_points)
+architecture.apply(reset_weights)
 
-    if weight_loss:
-        pos_weight = get_pos_weight([[train_labels]]).to(device)
-        train_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-        train_criterion = train_criterion.to(device)
-    else:
-        train_criterion = criterion
+if weight_loss:
+    pos_weight = get_pos_weight([[train_labels]]).to(device)
+    train_criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    train_criterion = train_criterion.to(device)
+else:
+    train_criterion = criterion
 
 if focal:
     alpha = get_alpha(train_labels)
-    train_criterion = get_criterion(train_criterion,
-                                    cost_sensitive,
+train_criterion = get_criterion(train_criterion,
+                                cost_sensitive,
                                 lambd,
                                 focal,
                                 alpha,
                                 gamma)
 
-    # Define optimizer
+# Define optimizer
 optimizer = Adam(architecture.parameters(),
                  lr=lr,
-                     weight_decay=weight_decay)
+                 weight_decay=weight_decay)
 
-    # Define training pipeline
-    architecture = architecture.to(device)
+# Define training pipeline
+architecture = architecture.to(device)
 
-    model = make_model(architecture,
-                       train_loader,
-                       val_loader,
-                       optimizer,
-                       train_criterion,
-                       criterion,
+model = make_model(architecture,
+                   train_loader,
+                   val_loader,
+                   optimizer,
+                   train_criterion,
+                   criterion,
                    single_channel=single_channel,
-                       n_epochs=n_epochs,
+                   n_epochs=n_epochs,
                    patience=patience,
                    n_good_detection=n_good_detection)
 
-    # Train Model
+# Train Model
 best_model = model.train()
 
-    if not os.path.exists("../results"):
-        os.mkdir("../results")
+if not os.path.exists("../results"):
+    os.mkdir("../results")
 
-    acc, f1, precision, recall = model.score(test_loader)
+acc, f1, precision, recall = model.score(test_loader)
 wandb.summary['test_acc'] = acc
 wandb.summary['test_f1'] = f1
 wandb.summary['test_precision'] = precision
