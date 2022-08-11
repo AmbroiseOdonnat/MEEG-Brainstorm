@@ -949,11 +949,11 @@ def mixup(X, y, lam, idx_perm):
         coefficient.
     References
     ----------
-    .. [1] Hongyi Zhang, Moustapha Cisse, Yann N. Dauphin, David Lopez-Paz
+    ..[1] Hongyi Zhang, Moustapha Cisse, Yann N. Dauphin, David Lopez-Paz
         (2018). mixup: Beyond Empirical Risk Minimization. In 2018
         International Conference on Learning Representations (ICLR)
         Online: https://arxiv.org/abs/1710.09412
-    .. [2] https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
+    ..[2]https://github.com/facebookresearch/mixup-cifar10/blob/master/train.py
      """
     device = X.device
     batch_size, n_channels, n_times = X.shape
