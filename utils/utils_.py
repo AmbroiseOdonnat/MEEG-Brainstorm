@@ -9,11 +9,25 @@ Contributors: Ambroise Odonnat.
 """
 
 import torch
+import os
 
 import numpy as np
 
 from loguru import logger
 from torch.utils.data.sampler import WeightedRandomSampler
+
+
+def reset_wandb_env():
+    exclude = {
+        "WANDB_PROJECT",
+        "WANDB_ENTITY",
+        "WANDB_API_KEY",
+        "WANDB_SWEEP_ID",
+        "WANDB_SWEEP_PARAM_PATH",
+    }
+    for k in os.environ.keys():
+        if k.startswith("WANDB_") and k not in exclude:
+            del os.environ[k]
 
 
 def define_device(gpu_id):
