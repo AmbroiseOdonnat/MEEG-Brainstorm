@@ -44,7 +44,7 @@ def get_parser():
                         type=str,
                         default="RNN_self_attention")
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--lr", type=float, default=0.02)
     parser.add_argument("--n_epochs", type=int, default=100)
     parser.add_argument("--patience", type=int, default=5)
     parser.add_argument("--n_good_detection", type=int, default=1)
@@ -58,6 +58,7 @@ def get_parser():
     parser.add_argument("--len_trials", type=float, default=2)
     parser.add_argument("--data_augment", type=str, default=None)
     parser.add_argument("--balanced", action="store_true")
+    parser.add_argument("--name_group", type=str, default="classic")
 
     return parser
 
@@ -82,6 +83,7 @@ alpha = args.alpha
 len_trials = args.len_trials
 data_augment = args.data_augment
 balanced = args.balanced
+name_group = args.name_group
 # Recover params
 weight_decay = 0
 
