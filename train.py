@@ -162,6 +162,7 @@ else:
 
 # Dataloader
 config = vars(args)
+wandb.init(project="spike_detection", config=config)
 
     loader = Loader(data,
                     labels,
@@ -236,49 +237,11 @@ best_model = model.train()
         os.mkdir("../results")
 
     acc, f1, precision, recall = model.score(test_loader)
-    results.append(
-        {
-            "method": method,
-            "warmup": warmup,
-            "weight_loss": weight_loss,
-            "cost_sensitive": cost_sensitive,
-            "len_trials": len_trials,
-            "transform": transform,
-            "fold": seed,
-            "acc": acc,
-            "f1": f1,
-            "precision": precision,
-            "recall": recall
-        }
-    )
-    mean_acc += acc
-    mean_f1 += f1
-    mean_precision += precision
-    mean_recall += recall
-    steps += 1
-    if save:
-
-        # Save results file as csv
-        if not os.path.exists("../results"):
-            os.mkdir("../results")
-
-        results_path = (
-            "../results/csv_classic"
-        )
-        if not os.path.exists(results_path):
-            os.mkdir(results_path)
-
-        results_path = os.path.join(results_path,
-                                    "results_classic_spike_detection_{}"
-                                    "-subjects.csv".format(len(subject_ids))
-                                    )
-        df_results = pd.DataFrame(results)
-        results = []
-
-        if os.path.exists(results_path):
-            df_old_results = pd.read_csv(results_path)
-            df_results = pd.concat([df_old_results, df_results])
-        df_results.to_csv(results_path, index=False)
+wandb.summary['test_acc'] = acc
+wandb.summary['test_f1'] = f1
+wandb.summary['test_precision'] = precision
+wandb.summary['test_recall'] = recall
+wandb.finish()
 
 print("Mean accuracy \t Mean F1-score \t Mean precision \t Mean recall")
 print("-" * 80)
