@@ -13,7 +13,6 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 
 import math
 
-from matplotlib.pyplot import axis
 import torch
 
 import torch.nn.functional as F
@@ -22,7 +21,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn
 from torch import Tensor
-from utils.utils_ import *
+from utils.utils_ import xavier_initialization, normal_initialization
 
 
 """ ********** Mish activation ********** """
@@ -790,6 +789,3 @@ class STT(nn.Module):
         out = self.classifier(code.flatten(1)).squeeze(1)
 
         return out, attention_weights
-
-
-
