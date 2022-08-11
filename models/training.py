@@ -10,6 +10,7 @@ Contributors: Ambroise Odonnat and Theo Gnassounou.
 
 import copy
 import torch
+import wandb
 
 import numpy as np
 
@@ -25,7 +26,6 @@ class make_model():
                  train_loader,
                  val_loader,
                  optimizer,
-                 scheduler,
                  train_criterion,
                  val_criterion,
                  single_channel,
@@ -53,7 +53,6 @@ class make_model():
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.optimizer = optimizer
-        self.scheduler = scheduler
         self.train_criterion = train_criterion
         self.val_criterion = val_criterion
         self.single_channel = single_channel
@@ -187,7 +186,6 @@ class make_model():
                         (loss, accuracy, etc.).
         """
 
-        history = list()
         best_val_loss = np.inf
         self.best_model = copy.deepcopy(self.model)
         print("epoch \t train_loss \t val_loss \t train_f1 \t val_f1")
@@ -202,17 +200,13 @@ class make_model():
                                                 self.val_loader,
                                                 self.val_criterion)
 
-            if self.scheduler:
-                self.scheduler.step(val_loss)
-
-            history.append(
-                {"epoch": epoch,
+            wandb.log({
+                 "epoch": epoch,
                  "train_loss": train_loss,
                  "val_loss": val_loss,
                  "train_perf": train_perf,
                  "valid_perf": val_perf
-                 }
-            )
+                 })
 
             print(
                 f"{epoch} \t {train_loss:0.4f} \t {val_loss:0.4f} \t"
@@ -237,7 +231,7 @@ class make_model():
                     print(f"Best val loss : {best_val_loss:.4f}\n")
                     break
 
-        return self.best_model, history
+        return self.best_model
 
     def score(self, test_loader):
 
