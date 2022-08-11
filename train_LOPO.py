@@ -249,10 +249,3 @@ for gen_seed in range(1):
             wandb.summary['test_f1'] = f1
             wandb.summary['test_precision'] = precision
             wandb.summary['test_recall'] = recall
-
-    print("Mean accuracy \t Mean F1-score \t Mean precision \t Mean recall")
-    print("-" * 80)
-    print(
-        f"{mean_acc/steps:0.4f} \t {mean_f1/steps:0.4f} \t"
-        f"{mean_precision/steps:0.4f} \t {mean_recall/steps:0.4f}\n"
-    )
