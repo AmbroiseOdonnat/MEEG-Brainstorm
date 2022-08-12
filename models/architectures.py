@@ -1019,11 +1019,14 @@ class VAEDecoder(nn.Module):
         if not decoder_config:
             # CNN
             if config_cnn:
+                # Load config parameters
                 filters = config_cnn["filters"]
                 kernel = config_cnn["kernel_size"]
                 stride = config_cnn.get("stride", 1)
+                # Compute target size to match in output
                 cnn_out_dims = out_size_CNN(shape[1:], kernel, stride, n=len(filters))
                 target_ctnn_out_dims = np.flip(cnn_out_dims, 0)
+                # Compute output size without padding
                 ctnn_out_dims = np.apply_along_axis(
                     out_size_CNN,
                     1,
@@ -1033,14 +1036,15 @@ class VAEDecoder(nn.Module):
                     n=1,
                     transpose=True,
                 )[:, 1]
+                # Compute padding required to match target size
                 padding = list(
                     map(tuple, target_ctnn_out_dims[1:] - ctnn_out_dims[:-1])
                 )
-                preflattened_dim = (
-                    filters[-1],
-                    int(cnn_out_dims[-1, 0]),
-                    int(cnn_out_dims[-1, 1]),
+                # Save flattened dimension to be use when unflattening
+                preflattened_dim = tuple(map(
+                    int, np.insert(cnn_out_dims[-1], 0, filters[-1], axis=0))
                 )
+                # Compute flattened dimension to be used in MLP input
                 flattened_dim = filters[-1] * np.prod(cnn_out_dims[-1])
 
                 # Update CNN config
